@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max</title>
+    <style>
+        :root {
+            --primary: #e63946;
+            --secondary: #457b9d;
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-color: #212529;
+            --border-color: #dee2e6;
+        }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; }
+        .container { max-width: 1150px; margin: 0 auto; background: var(--card-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        
+        h2 { color: var(--primary); text-align: center; margin-bottom: 5px; font-size: 1.5rem; }
+        .date-display { text-align: center; color: #6c757d; margin-bottom: 15px; font-size: 0.9rem; }
+        .date-display input { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
+
+        .card { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
+        .card h3 { margin-top: 0; color: var(--secondary); font-size: 1.1rem; border-bottom: 2px solid #f1f1f1; padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: center; }
+        
+        input, select { width: 100%; padding: 9px; border: 1px solid var(--border-color); border-radius: 8px; font-size: 0.9rem; box-sizing: border-box; background: #fff; transition: border 0.2s; }
+        input:focus, select:focus { outline: none; border-color: var(--secondary); box-shadow: 0 0 0 3px rgba(69,123,157,0.15); }
+
+        .btn { background-color: #2a9d8f; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: background 0.2s, transform 0.1s; text-align: center; display: inline-flex; justify-content: center; align-items: center; gap: 5px; }
+        .btn:active { transform: scale(0.98); }
+        .btn-primary { background-color: var(--secondary); }
+        .btn-primary:hover { background-color: #3d6a88; }
+        .btn-success { background-color: #2a9d8f; }
+        .btn-success:hover { background-color: #238579; }
+        .btn-danger { background-color: #e63946; padding: 6px 10px; font-size: 0.8rem; }
+        .btn-danger:hover { background-color: #c92a3b; }
+        .btn-excel { background-color: #f4a261; color: white; }
+        .btn-excel:hover { background-color: #e76f51; }
+
+        .table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; white-space: nowrap; }
+        th, td { padding: 10px 10px; text-align: center; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        th { background-color: #f1faee; color: #1d3557; font-weight: 600; }
+        tr:last-child td { border-bottom: none; }
+        
+        .item-img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); }
+        .editable-input { width: 65px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
+        
+        .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
+        .badge-normal { background: #e6fcf5; color: #0ca678; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
+        
+        .category-header { background-color: #e9ecef !important; text-align: left !important; font-weight: bold !important; color: #495057; font-size: 0.95rem; }
+        
+        .action-bar { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
+        .action-bar .btn { flex: 1; min-width: 180px; padding: 12px; font-size: 1rem; }
+
+        @media (max-width: 768px) {
+            .container { padding: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🔥 ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max 🔥</h2>
+    <div class="date-display">
+        📅 วันที่ทำรายการ: <input type="date" id="recordDate">
+    </div>
+
+    <!-- 1. เพิ่มหมวดหมู่ -->
+    <div class="card">
+        <h3>📁 เพิ่มหมวดหมู่ใหม่</h3>
+        <div class="form-grid" style="grid-template-columns: 1fr auto;">
+            <input type="text" id="newCategoryName" placeholder="ชื่อหมวดหมู่ (เช่น เครื่องดื่ม)">
+            <button class="btn btn-primary" onclick="addCategory()">➕ เพิ่มหมวดหมู่</button>
+        </div>
+    </div>
+
+    <!-- 2. เพิ่มสินค้า (รองรับถ่ายรูป + หมายเหตุ) -->
+    <div class="card">
+        <h3>📦 เพิ่มรายการวัตถุดิบ</h3>
+        <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
+            <input type="text" id="newCode" placeholder="รหัส (เช่น M01)">
+            <input type="text" id="newName" placeholder="ชื่อวัตถุดิบ *">
+            <select id="newCategory">
+                <option value="auto">🤖 แยกหมวดอัตโนมัติ</option>
+            </select>
+            <input type="text" id="newUnit" placeholder="หน่วย * (ถุง, กก.)">
+            <input type="number" id="newStock" placeholder="สต็อกตั้งต้น *" min="0">
+            <input type="text" id="newNote" placeholder="หมายเหตุ (ถ้ามี)">
+            
+            <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 8px; border-radius: 8px; border: 1px dashed #ced4da;">
+                <label style="font-size: 0.85rem; font-weight: 600; color: #495057;">📸 รูปภาพสินค้า (ถ่ายรูปหรือเลือกไฟล์):</label>
+                <input type="file" id="newImage" accept="image/*" capture="environment" style="font-size: 0.85rem; border: none; background: transparent;">
+            </div>
+
+            <button class="btn btn-success" onclick="addItem()" style="grid-column: 1 / -1; padding: 12px;">➕ บันทึกเพิ่มสินค้าใหม่เข้าสต็อก</button>
+        </div>
+    </div>
+
+    <!-- 3. ตารางสต็อกหลัก -->
+    <div class="card">
+        <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน</h3>
+        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">
+            💡 เคล็ดลับ: คลิกแก้ไขชื่อ, หน่วย, หมายเหตุ หรือช่อง "คงเหลือปัจจุบัน" ได้ทันทีในตาราง
+        </div>
+        
+        <div class="table-responsive">
+            <table id="stockTable">
+                <thead>
+                    <tr>
+                        <th>รูป</th>
+                        <th>รหัส</th>
+                        <th>ชื่อรายการ</th>
+                        <th>หมวดหมู่</th>
+                        <th>หน่วย</th>
+                        <th>คงเหลือ</th>
+                        <th>เบิกใช้ (วันนี้)</th>
+                        <th>ยอดใช้ (7 วัน)</th>
+                        <th>เฉลี่ย/วัน</th>
+                        <th>หมายเหตุ</th>
+                        <th>สถานะ</th>
+                        <th>จัดการ</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- โหลดข้อมูลด้วย JS -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="action-bar">
+            <button class="btn btn-success" onclick="saveDailyData()">💾 บันทึกการตัดสต็อกประจำวัน</button>
+            <button class="btn btn-excel" onclick="exportToExcel()">📊 Export เป็น Excel</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.getElementById('recordDate').valueAsDate = new Date();
+
+    let categories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
+
+    let inventory = [
+        { code: "M01", name: "เส้นหนุบจีน", category: "เส้น", unit: "ถุง", stock: 12, usedToday: 0, total7Days: 28, note: "แช่น้ำก่อนใช้", image: "" },
+        { code: "M03", name: "สามชั้นสไลด์", category: "เนื้อสัตว์", unit: "แพ็ค", stock: 15, usedToday: 0, total7Days: 52, note: "ช่องฟรีซตู้ล่าง", image: "" },
+        { code: "M05", name: "ผักกาดขาว", category: "ผัก", unit: "กก.", stock: 10, usedToday: 0, total7Days: 40, note: "รับของสดทุกเช้า", image: "" }
+    ];
+
+    function updateCategoryDropdown() {
+        let select = document.getElementById("newCategory");
+        let currentVal = select.value;
+        select.innerHTML = '<option value="auto">🤖 แยกหมวดอัตโนมัติ</option>';
+        categories.forEach(cat => {
+            select.innerHTML += `<option value="${cat}">${cat}</option>`;
+        });
+        select.value = currentVal;
+    }
+
+    function addCategory() {
+        let catName = document.getElementById("newCategoryName").value.trim();
+        if (!catName) { alert("กรุณากรอกชื่อหมวดหมู่!"); return; }
+        if (categories.includes(catName)) { alert("มีหมวดหมู่นี้อยู่แล้ว!"); return; }
+        categories.push(catName);
+        document.getElementById("newCategoryName").value = "";
+        updateCategoryDropdown();
+        renderTable();
+        alert(`✅ เพิ่มหมวดหมู่ "${catName}" สำเร็จ!`);
+    }
+
+    function detectCategory(name) {
+        let n = name.toLowerCase();
+        if (n.includes("ผัก") || n.includes("กวางตุ้ง") || n.includes("เห็ด") || n.includes("คะน้า") || n.includes("ผักบุ้ง")) return "ผัก";
+        if (n.includes("หมู") || n.includes("เนื้อ") || n.includes("ไก่") || n.includes("สามชั้น") || n.includes("กุ้ง") || n.includes("ปลาหมึก")) return "เนื้อสัตว์";
+        if (n.includes("เส้น") || n.includes("บะหมี่") || n.includes("มาม่า") || n.includes("วุ้นเส้น") || n.includes("อูดง")) return "เส้น";
+        if (n.includes("เต้าหู้") || n.includes("ฟองเต้าหู้")) return "เต้าหู้";
+        if (n.includes("เกี๊ยว") || n.includes("ลูกชิ้น") || n.includes("ปูอัด") || n.includes("ชีสบอล")) return "อาหารแช่แข็ง";
+        if (n.includes("ซุป") || n.includes("น้ำพริก") || n.includes("น้ำจิ้ม") || n.includes("เครื่องปรุง")) return "เครื่องปรุง/น้ำซุป";
+        return categories.length > 0 ? categories[0] : "อื่นๆ";
+    }
+
+    function renderTable() {
+        const tbody = document.getElementById("tableBody");
+        tbody.innerHTML = "";
+        
+        let allCats = [...categories];
+        inventory.forEach(item => {
+            let cat = item.category || "อื่นๆ";
+            if (!allCats.includes(cat)) allCats.push(cat);
+        });
+
+        allCats.forEach(cat => {
+            let itemsInCat = inventory.filter(item => (item.category || "อื่นๆ") === cat);
+            if (itemsInCat.length === 0) return;
+
+            let catRow = `<tr><td colspan="12" class="category-header">📁 หมวด: ${cat}</td></tr>`;
+            tbody.innerHTML += catRow;
+
+            itemsInCat.forEach((item) => {
+                let index = inventory.indexOf(item);
+                let avgDaily = (item.total7Days / 7).toFixed(1);
+                let statusHTML = item.stock <= 3 ? '<span class="badge-alert">⚠️ สั่งเพิ่มด่วน</span>' : '<span class="badge-normal">ปกติ</span>';
+                let imgHTML = item.image ? `<img src="${item.image}" class="item-img">` : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span>`;
+
+                let catOptions = allCats.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
+
+                let row = `<tr>
+                    <td>${imgHTML}</td>
+                    <td><input type="text" value="${item.code || ''}" style="width:50px; text-align:center; padding:4px;" onchange="updateField(${index}, 'code', this.value)"></td>
+                    <td><input type="text" value="${item.name}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
+                    <td><select style="width:100px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
+                    <td><input type="text" value="${item.unit}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
+                    <td><input type="number" value="${item.stock}" min="0" class="editable-input" onchange="updateField(${index}, 'stock', parseInt(this.value)||0)"></td>
+                    <td><input type="number" id="used_${index}" value="${item.usedToday}" min="0" style="width:55px; text-align:center; padding:4px;" onchange="updateUsed(${index})"></td>
+                    <td>${item.total7Days}</td>
+                    <td>${avgDaily}</td>
+                    <td><input type="text" value="${item.note || ''}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
+                    <td>${statusHTML}</td>
+                    <td><button class="btn btn-danger" onclick="deleteItem(${index})">🗑️ ลบ</button></td>
+                </tr>`;
+                tbody.innerHTML += row;
+            });
+        });
+    }
+
+    function updateField(index, field, value) {
+        inventory[index][field] = value;
+        if(field === 'name' && inventory[index].category === 'อื่นๆ') {
+            inventory[index].category = detectCategory(value);
+        }
+        renderTable();
+    }
+
+    function updateUsed(index) {
+        let val = parseInt(document.getElementById(`used_${index}`).value) || 0;
+        inventory[index].usedToday = val;
+    }
+
+    function addItem() {
+        let code = document.getElementById("newCode").value.trim();
+        let name = document.getElementById("newName").value.trim();
+        let catSelect = document.getElementById("newCategory").value;
+        let unit = document.getElementById("newUnit").value.trim();
+        let stock = parseInt(document.getElementById("newStock").value);
+        let note = document.getElementById("newNote").value.trim();
+        let imageInput = document.getElementById("newImage");
+
+        if (!name || !unit || isNaN(stock)) {
+            alert("กรุณากรอกชื่อวัตถุดิบ, หน่วย และสต็อกตั้งต้นให้ครบถ้วน!");
+            return;
+        }
+
+        let category = catSelect === "auto" ? detectCategory(name) : catSelect;
+
+        if (imageInput.files && imageInput.files[0]) {
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: e.target.result });
+                resetForm();
+                renderTable();
+            }
+            reader.readAsDataURL(imageInput.files[0]);
+        } else {
+            inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: "" });
+            resetForm();
+            renderTable();
+        }
+    }
+
+    function resetForm() {
+        document.getElementById("newCode").value = "";
+        document.getElementById("newName").value = "";
+        document.getElementById("newUnit").value = "";
+        document.getElementById("newStock").value = "";
+        document.getElementById("newNote").value = "";
+        document.getElementById("newImage").value = "";
+        document.getElementById("newCategory").value = "auto";
+    }
+
+    function deleteItem(index) {
+        if (confirm(`คุณต้องการลบ "${inventory[index].name}" ออกจากระบบใช่หรือไม่?`)) {
+            inventory.splice(index, 1);
+            renderTable();
+        }
+    }
+
+    function saveDailyData() {
+        let dateStr = document.getElementById("recordDate").value;
+        inventory.forEach((item, index) => {
+            let inputElem = document.getElementById(`used_${index}`);
+            if (inputElem) {
+                let val = parseInt(inputElem.value) || 0;
+                if (val > 0) {
+                    item.stock -= val; 
+                    if (item.stock < 0) item.stock = 0;
+                    item.total7Days += val; 
+                    item.usedToday = 0; 
+                }
+            }
+        });
+        alert(`✅ บันทึกตัดสต็อกประจำวันที่ ${dateStr} เรียบร้อยแล้ว!`);
+        renderTable();
+    }
+
+    function exportToExcel() {
+        let dateStr = document.getElementById("recordDate").value;
+        let csv = '\uFEFFรหัสสินค้า,ชื่อรายการ,หมวดหมู่,หน่วย,คงเหลือปัจจุบัน,ยอดใช้รวม (7 วัน),เฉลี่ยต่อวัน,หมายเหตุ,สถานะ\n';
+        inventory.forEach(item => {
+            let avgDaily = (item.total7Days / 7).toFixed(1);
+            let statusText = item.stock <= 3 ? 'สั่งเพิ่มด่วน' : 'ปกติ';
+            csv += `"${item.code || ''}","${item.name}","${item.category || 'อื่นๆ'}","${item.unit}",${item.stock},${item.total7Days},${avgDaily},"${item.note || ''}","${statusText}"\n`;
+        });
+        let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = `Malatang_Stock_${dateStr}.csv`;
+        a.click();
+    }
+
+    updateCategoryDropdown();
+    renderTable();
+</script>
+
+</body>
+</html>
