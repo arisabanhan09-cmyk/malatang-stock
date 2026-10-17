@@ -38,6 +38,8 @@
         .btn-danger:hover { background-color: #c92a3b; }
         .btn-excel { background-color: #f4a261; color: white; }
         .btn-excel:hover { background-color: #e76f51; }
+        .btn-reset { background-color: #6c757d; color: white; }
+        .btn-reset:hover { background-color: #5a6268; }
 
         .table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
         table { width: 100%; border-collapse: collapse; font-size: 0.88rem; white-space: nowrap; }
@@ -54,7 +56,7 @@
         .category-header { background-color: #e9ecef !important; text-align: left !important; font-weight: bold !important; color: #495057; font-size: 0.95rem; }
         
         .action-bar { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .action-bar .btn { flex: 1; min-width: 180px; padding: 12px; font-size: 1rem; }
+        .action-bar .btn { flex: 1; min-width: 150px; padding: 12px; font-size: 1rem; }
 
         @media (max-width: 768px) {
             .container { padding: 8px; }
@@ -78,7 +80,7 @@
         </div>
     </div>
 
-    <!-- 2. เพิ่มสินค้า (รองรับถ่ายรูป + หมายเหตุ) -->
+    <!-- 2. เพิ่มสินค้า -->
     <div class="card">
         <h3>📦 เพิ่มรายการวัตถุดิบ</h3>
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
@@ -92,7 +94,7 @@
             <input type="text" id="newNote" placeholder="หมายเหตุ (ถ้ามี)">
             
             <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 8px; border-radius: 8px; border: 1px dashed #ced4da;">
-                <label style="font-size: 0.85rem; font-weight: 600; color: #495057;">📸 รูปภาพสินค้า (ถ่ายรูปหรือเลือกไฟล์):</label>
+                <label style="font-size: 0.85rem; font-weight: 600; color: #495057;">📸 รูปภาพสินค้า:</label>
                 <input type="file" id="newImage" accept="image/*" capture="environment" style="font-size: 0.85rem; border: none; background: transparent;">
             </div>
 
@@ -104,7 +106,7 @@
     <div class="card">
         <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน</h3>
         <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">
-            💡 เคล็ดลับ: คลิกแก้ไขชื่อ, หน่วย, หมายเหตุ หรือช่อง "คงเหลือปัจจุบัน" ได้ทันทีในตาราง
+            💡 ข้อมูลจะถูกบันทึกอัตโนมัติในเครื่อง รีเฟรชไม่หาย
         </div>
         
         <div class="table-responsive">
@@ -132,8 +134,9 @@
         </div>
 
         <div class="action-bar">
-            <button class="btn btn-success" onclick="saveDailyData()">💾 บันทึกการตัดสต็อกประจำวัน</button>
-            <button class="btn btn-excel" onclick="exportToExcel()">📊 Export เป็น Excel</button>
+            <button class="btn btn-success" onclick="saveDailyData()">💾 บันทึกตัดสต็อก</button>
+            <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
+            <button class="btn btn-reset" onclick="resetDefaultData()">🔄 รีเซ็ตข้อมูลเริ่มต้น</button>
         </div>
     </div>
 </div>
@@ -141,13 +144,22 @@
 <script>
     document.getElementById('recordDate').valueAsDate = new Date();
 
-    let categories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
-
-    let inventory = [
+    // โหลดข้อมูลหมวดหมู่และสต็อกเดิมจาก LocalStorage (ถ้ามี)
+    let defaultCategories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
+    let defaultInventory = [
         { code: "M01", name: "เส้นหนุบจีน", category: "เส้น", unit: "ถุง", stock: 12, usedToday: 0, total7Days: 28, note: "แช่น้ำก่อนใช้", image: "" },
         { code: "M03", name: "สามชั้นสไลด์", category: "เนื้อสัตว์", unit: "แพ็ค", stock: 15, usedToday: 0, total7Days: 52, note: "ช่องฟรีซตู้ล่าง", image: "" },
         { code: "M05", name: "ผักกาดขาว", category: "ผัก", unit: "กก.", stock: 10, usedToday: 0, total7Days: 40, note: "รับของสดทุกเช้า", image: "" }
     ];
+
+    let categories = JSON.parse(localStorage.getItem('malatang_categories')) || defaultCategories;
+    let inventory = JSON.parse(localStorage.getItem('malatang_inventory')) || defaultInventory;
+
+    // ฟังก์ชันบันทึกข้อมูลลงหน่วยความจำเครื่อง
+    function saveData() {
+        localStorage.setItem('malatang_categories', JSON.stringify(categories));
+        localStorage.setItem('malatang_inventory', JSON.stringify(inventory));
+    }
 
     function updateCategoryDropdown() {
         let select = document.getElementById("newCategory");
@@ -165,6 +177,7 @@
         if (categories.includes(catName)) { alert("มีหมวดหมู่นี้อยู่แล้ว!"); return; }
         categories.push(catName);
         document.getElementById("newCategoryName").value = "";
+        saveData();
         updateCategoryDropdown();
         renderTable();
         alert(`✅ เพิ่มหมวดหมู่ "${catName}" สำเร็จ!`);
@@ -230,12 +243,14 @@
         if(field === 'name' && inventory[index].category === 'อื่นๆ') {
             inventory[index].category = detectCategory(value);
         }
+        saveData();
         renderTable();
     }
 
     function updateUsed(index) {
         let val = parseInt(document.getElementById(`used_${index}`).value) || 0;
         inventory[index].usedToday = val;
+        saveData();
     }
 
     function addItem() {
@@ -258,12 +273,14 @@
             let reader = new FileReader();
             reader.onload = function(e) {
                 inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: e.target.result });
+                saveData();
                 resetForm();
                 renderTable();
             }
             reader.readAsDataURL(imageInput.files[0]);
         } else {
             inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: "" });
+            saveData();
             resetForm();
             renderTable();
         }
@@ -282,6 +299,7 @@
     function deleteItem(index) {
         if (confirm(`คุณต้องการลบ "${inventory[index].name}" ออกจากระบบใช่หรือไม่?`)) {
             inventory.splice(index, 1);
+            saveData();
             renderTable();
         }
     }
@@ -300,8 +318,17 @@
                 }
             }
         });
+        saveData();
         alert(`✅ บันทึกตัดสต็อกประจำวันที่ ${dateStr} เรียบร้อยแล้ว!`);
         renderTable();
+    }
+
+    function resetDefaultData() {
+        if (confirm("⚠️ คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นใช่หรือไม่? (ข้อมูลที่เพิ่มหรือลบไปจะหาย and กลับมาเป็นค่าเริ่มต้น)")) {
+            localStorage.removeItem('malatang_categories');
+            localStorage.removeItem('malatang_inventory');
+            location.reload();
+        }
     }
 
     function exportToExcel() {
