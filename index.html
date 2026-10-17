@@ -48,7 +48,7 @@
         tr:last-child td { border-bottom: none; }
         
         .item-img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); }
-        .editable-input { width: 70px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
+        .editable-input { width: 75px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
         
         .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
         .badge-normal { background: #e6fcf5; color: #0ca678; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
@@ -106,7 +106,7 @@
     <div class="card">
         <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน</h3>
         <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">
-            💡 สามารถกรอกจำนวนเป็นทศนิยมได้ (เช่น 0.5 หรือ 1.5) ข้อมูลบันทึกอัตโนมัติ
+            💡 รองรับทศนิยมเต็มรูปแบบ (เช่น 0.9 หรือ 1.5) ข้อมูลบันทึกอัตโนมัติ
         </div>
         
         <div class="table-responsive">
@@ -225,7 +225,7 @@
                     <td><input type="text" value="${item.unit}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
                     <td><input type="number" step="any" value="${item.stock}" class="editable-input" onchange="updateField(${index}, 'stock', parseFloat(this.value)||0)"></td>
                     <td><input type="number" step="any" id="used_${index}" value="${item.usedToday}" style="width:65px; text-align:center; padding:4px;" onchange="updateUsed(${index})"></td>
-                    <td>${parseFloat(item.total7Days.toFixed(2))}</td>
+                    <td>${item.total7Days}</td>
                     <td>${avgDaily}</td>
                     <td><input type="text" value="${item.note || ''}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
                     <td>${statusHTML}</td>
@@ -237,7 +237,11 @@
     }
 
     function updateField(index, field, value) {
-        inventory[index][field] = value;
+        if (field === 'stock' || field === 'usedToday') {
+            inventory[index][field] = parseFloat(value) || 0;
+        } else {
+            inventory[index][field] = value;
+        }
         if(field === 'name' && inventory[index].category === 'อื่นๆ') {
             inventory[index].category = detectCategory(value);
         }
@@ -309,9 +313,9 @@
             if (inputElem) {
                 let val = parseFloat(inputElem.value) || 0;
                 if (val > 0) {
-                    item.stock -= val; 
+                    item.stock = parseFloat((item.stock - val).toFixed(2)); 
                     if (item.stock < 0) item.stock = 0;
-                    item.total7Days += val; 
+                    item.total7Days = parseFloat((item.total7Days + val).toFixed(2)); 
                     item.usedToday = 0; 
                 }
             }
