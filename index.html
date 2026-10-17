@@ -48,7 +48,7 @@
         tr:last-child td { border-bottom: none; }
         
         .item-img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); }
-        .editable-input { width: 65px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
+        .editable-input { width: 70px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
         
         .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
         .badge-normal { background: #e6fcf5; color: #0ca678; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
@@ -89,8 +89,8 @@
             <select id="newCategory">
                 <option value="auto">🤖 แยกหมวดอัตโนมัติ</option>
             </select>
-            <input type="text" id="newUnit" placeholder="หน่วย * (ถุง, กก.)">
-            <input type="number" id="newStock" placeholder="สต็อกตั้งต้น *" min="0">
+            <input type="text" id="newUnit" placeholder="หน่วย * (กก., ถุง)">
+            <input type="number" id="newStock" placeholder="สต็อกตั้งต้น *" min="0" step="any">
             <input type="text" id="newNote" placeholder="หมายเหตุ (ถ้ามี)">
             
             <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 8px; border-radius: 8px; border: 1px dashed #ced4da;">
@@ -106,7 +106,7 @@
     <div class="card">
         <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน</h3>
         <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">
-            💡 ข้อมูลจะถูกบันทึกอัตโนมัติในเครื่อง รีเฟรชไม่หาย
+            💡 สามารถกรอกจำนวนเป็นทศนิยมได้ (เช่น 0.5 หรือ 1.5) ข้อมูลบันทึกอัตโนมัติ
         </div>
         
         <div class="table-responsive">
@@ -144,18 +144,16 @@
 <script>
     document.getElementById('recordDate').valueAsDate = new Date();
 
-    // โหลดข้อมูลหมวดหมู่และสต็อกเดิมจาก LocalStorage (ถ้ามี)
     let defaultCategories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
     let defaultInventory = [
         { code: "M01", name: "เส้นหนุบจีน", category: "เส้น", unit: "ถุง", stock: 12, usedToday: 0, total7Days: 28, note: "แช่น้ำก่อนใช้", image: "" },
         { code: "M03", name: "สามชั้นสไลด์", category: "เนื้อสัตว์", unit: "แพ็ค", stock: 15, usedToday: 0, total7Days: 52, note: "ช่องฟรีซตู้ล่าง", image: "" },
-        { code: "M05", name: "ผักกาดขาว", category: "ผัก", unit: "กก.", stock: 10, usedToday: 0, total7Days: 40, note: "รับของสดทุกเช้า", image: "" }
+        { code: "M05", name: "ผักบุ้ง", category: "ผัก", unit: "กก.", stock: 5.5, usedToday: 0, total7Days: 14.5, note: "รับของสดทุกเช้า", image: "" }
     ];
 
     let categories = JSON.parse(localStorage.getItem('malatang_categories')) || defaultCategories;
     let inventory = JSON.parse(localStorage.getItem('malatang_inventory')) || defaultInventory;
 
-    // ฟังก์ชันบันทึกข้อมูลลงหน่วยความจำเครื่อง
     function saveData() {
         localStorage.setItem('malatang_categories', JSON.stringify(categories));
         localStorage.setItem('malatang_inventory', JSON.stringify(inventory));
@@ -225,9 +223,9 @@
                     <td><input type="text" value="${item.name}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
                     <td><select style="width:100px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
                     <td><input type="text" value="${item.unit}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
-                    <td><input type="number" value="${item.stock}" min="0" class="editable-input" onchange="updateField(${index}, 'stock', parseInt(this.value)||0)"></td>
-                    <td><input type="number" id="used_${index}" value="${item.usedToday}" min="0" style="width:55px; text-align:center; padding:4px;" onchange="updateUsed(${index})"></td>
-                    <td>${item.total7Days}</td>
+                    <td><input type="number" step="any" value="${item.stock}" class="editable-input" onchange="updateField(${index}, 'stock', parseFloat(this.value)||0)"></td>
+                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday}" style="width:65px; text-align:center; padding:4px;" onchange="updateUsed(${index})"></td>
+                    <td>${parseFloat(item.total7Days.toFixed(2))}</td>
                     <td>${avgDaily}</td>
                     <td><input type="text" value="${item.note || ''}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
                     <td>${statusHTML}</td>
@@ -248,7 +246,7 @@
     }
 
     function updateUsed(index) {
-        let val = parseInt(document.getElementById(`used_${index}`).value) || 0;
+        let val = parseFloat(document.getElementById(`used_${index}`).value) || 0;
         inventory[index].usedToday = val;
         saveData();
     }
@@ -258,7 +256,7 @@
         let name = document.getElementById("newName").value.trim();
         let catSelect = document.getElementById("newCategory").value;
         let unit = document.getElementById("newUnit").value.trim();
-        let stock = parseInt(document.getElementById("newStock").value);
+        let stock = parseFloat(document.getElementById("newStock").value);
         let note = document.getElementById("newNote").value.trim();
         let imageInput = document.getElementById("newImage");
 
@@ -309,7 +307,7 @@
         inventory.forEach((item, index) => {
             let inputElem = document.getElementById(`used_${index}`);
             if (inputElem) {
-                let val = parseInt(inputElem.value) || 0;
+                let val = parseFloat(inputElem.value) || 0;
                 if (val > 0) {
                     item.stock -= val; 
                     if (item.stock < 0) item.stock = 0;
@@ -324,7 +322,7 @@
     }
 
     function resetDefaultData() {
-        if (confirm("⚠️ คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นใช่หรือไม่? (ข้อมูลที่เพิ่มหรือลบไปจะหาย and กลับมาเป็นค่าเริ่มต้น)")) {
+        if (confirm("⚠️ คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นใช่หรือไม่?")) {
             localStorage.removeItem('malatang_categories');
             localStorage.removeItem('malatang_inventory');
             location.reload();
