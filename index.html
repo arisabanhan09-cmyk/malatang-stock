@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max</title>
+    <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max (Cloud Realtime)</title>
+    <!-- เรียกใช้งาน Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
         :root {
             --primary: #e63946;
@@ -14,7 +17,7 @@
             --border-color: #dee2e6;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; }
-        .container { max-width: 1150px; margin: 0 auto; background: var(--card-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        .container { max-width: 1200px; margin: 0 auto; background: var(--card-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
         
         h2 { color: var(--primary); text-align: center; margin-bottom: 5px; font-size: 1.5rem; }
         .date-display { text-align: center; color: #6c757d; margin-bottom: 15px; font-size: 0.9rem; }
@@ -40,14 +43,16 @@
         .btn-excel:hover { background-color: #e76f51; }
         .btn-reset { background-color: #6c757d; color: white; }
         .btn-reset:hover { background-color: #5a6268; }
+        .btn-upload { background-color: #457b9d; color: white; padding: 4px 8px; font-size: 0.75rem; margin-top: 4px; }
+        .btn-upload:hover { background-color: #1d3557; }
 
         .table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
         table { width: 100%; border-collapse: collapse; font-size: 0.88rem; white-space: nowrap; }
-        th, td { padding: 10px 10px; text-align: center; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         th { background-color: #f1faee; color: #1d3557; font-weight: 600; }
         tr:last-child td { border-bottom: none; }
         
-        .item-img { width: 40px; height: 40px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); }
+        .item-img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); display: block; margin: 0 auto; }
         .editable-input { width: 75px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
         
         .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
@@ -58,6 +63,8 @@
         .action-bar { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         .action-bar .btn { flex: 1; min-width: 150px; padding: 12px; font-size: 1rem; }
 
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; font-size: 1.2rem; font-weight: bold; color: var(--secondary); }
+
         @media (max-width: 768px) {
             .container { padding: 8px; }
         }
@@ -65,8 +72,10 @@
 </head>
 <body>
 
+    <div id="loadingOverlay">กำลังเชื่อมต่อฐานข้อมูลกลาง...</div>
+
 <div class="container">
-    <h2>🔥 ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max 🔥</h2>
+    <h2>🔥 ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max (Cloud) 🔥</h2>
     <div class="date-display">
         📅 วันที่ทำรายการ: <input type="date" id="recordDate">
     </div>
@@ -104,16 +113,16 @@
 
     <!-- 3. ตารางสต็อกหลัก -->
     <div class="card">
-        <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน</h3>
+        <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน (Realtime)</h3>
         <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">
-            💡 รองรับทศนิยมเต็มรูปแบบ (เช่น 0.9 หรือ 1.5) ข้อมูลบันทึกอัตโนมัติ
+            💡 สามารถแก้ไข รหัส, ชื่อ, หมวดหมู่, หน่วย, สต็อก และกดเปลี่ยนรูปภาพได้โดยตรงในตาราง
         </div>
         
         <div class="table-responsive">
             <table id="stockTable">
                 <thead>
                     <tr>
-                        <th>รูป</th>
+                        <th>รูปภาพ</th>
                         <th>รหัส</th>
                         <th>ชื่อรายการ</th>
                         <th>หมวดหมู่</th>
@@ -142,7 +151,24 @@
 </div>
 
 <script>
+    // ⚠️ นำค่า Firebase Config ของคุณมาวางแทนที่ด้านล่างนี้
+    const firebaseConfig = {
+        apiKey: "AIzaSyDie7nCV9MK1KYfmnwJ7bToD-fQPTbMOug",
+        authDomain: "malatang-stock.firebaseapp.com",
+        databaseURL: "https://malatang-stock-default-rtdb.asia-southeast1.firebasedatabase.app/,
+        projectId: "malatang-stock",
+        storageBucket: "malatang-stock.firebasestorage.app",
+        messagingSenderId: "767469911960",
+        appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     document.getElementById('recordDate').valueAsDate = new Date();
+
+    let categories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
+    let inventory = [];
 
     let defaultCategories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
     let defaultInventory = [
@@ -151,16 +177,34 @@
         { code: "M05", name: "ผักบุ้ง", category: "ผัก", unit: "กก.", stock: 5.5, usedToday: 0, total7Days: 14.5, note: "รับของสดทุกเช้า", image: "" }
     ];
 
-    let categories = JSON.parse(localStorage.getItem('malatang_categories')) || defaultCategories;
-    let inventory = JSON.parse(localStorage.getItem('malatang_inventory')) || defaultInventory;
+    db.ref('malatang_stock').on('value', (snapshot) => {
+        let data = snapshot.val();
+        if (data) {
+            categories = data.categories || defaultCategories;
+            inventory = data.inventory || defaultInventory;
+        } else {
+            categories = defaultCategories;
+            inventory = defaultInventory;
+            syncToCloud();
+        }
+        updateCategoryDropdown();
+        renderTable();
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }, (error) => {
+        alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล: " + error.message);
+        document.getElementById('loadingOverlay').style.display = 'none';
+    });
 
-    function saveData() {
-        localStorage.setItem('malatang_categories', JSON.stringify(categories));
-        localStorage.setItem('malatang_inventory', JSON.stringify(inventory));
+    function syncToCloud() {
+        db.ref('malatang_stock').set({
+            categories: categories,
+            inventory: inventory
+        });
     }
 
     function updateCategoryDropdown() {
         let select = document.getElementById("newCategory");
+        if(!select) return;
         let currentVal = select.value;
         select.innerHTML = '<option value="auto">🤖 แยกหมวดอัตโนมัติ</option>';
         categories.forEach(cat => {
@@ -175,9 +219,7 @@
         if (categories.includes(catName)) { alert("มีหมวดหมู่นี้อยู่แล้ว!"); return; }
         categories.push(catName);
         document.getElementById("newCategoryName").value = "";
-        saveData();
-        updateCategoryDropdown();
-        renderTable();
+        syncToCloud();
         alert(`✅ เพิ่มหมวดหมู่ "${catName}" สำเร็จ!`);
     }
 
@@ -194,6 +236,7 @@
 
     function renderTable() {
         const tbody = document.getElementById("tableBody");
+        if(!tbody) return;
         tbody.innerHTML = "";
         
         let allCats = [...categories];
@@ -213,18 +256,21 @@
                 let index = inventory.indexOf(item);
                 let avgDaily = (item.total7Days / 7).toFixed(1);
                 let statusHTML = item.stock <= 3 ? '<span class="badge-alert">⚠️ สั่งเพิ่มด่วน</span>' : '<span class="badge-normal">ปกติ</span>';
-                let imgHTML = item.image ? `<img src="${item.image}" class="item-img">` : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span>`;
+                
+                let imgHTML = item.image 
+                    ? `<img src="${item.image}" class="item-img"><br><label class="btn btn-upload">📷 เปลี่ยนรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`
+                    : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><br><label class="btn btn-upload">📷 เพิ่มรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
 
                 let catOptions = allCats.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
 
                 let row = `<tr>
                     <td>${imgHTML}</td>
-                    <td><input type="text" value="${item.code || ''}" style="width:50px; text-align:center; padding:4px;" onchange="updateField(${index}, 'code', this.value)"></td>
-                    <td><input type="text" value="${item.name}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
+                    <td><input type="text" value="${item.code || ''}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'code', this.value)"></td>
+                    <td><input type="text" value="${item.name}" style="width:120px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
                     <td><select style="width:100px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
                     <td><input type="text" value="${item.unit}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
                     <td><input type="number" step="any" value="${item.stock}" class="editable-input" onchange="updateField(${index}, 'stock', parseFloat(this.value)||0)"></td>
-                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday}" style="width:65px; text-align:center; padding:4px;" onchange="updateUsed(${index})"></td>
+                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday}" style="width:65px; text-align:center; padding:4px;" onchange="updateUsedLocally(${index}, this.value)"></td>
                     <td>${item.total7Days}</td>
                     <td>${avgDaily}</td>
                     <td><input type="text" value="${item.note || ''}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
@@ -237,22 +283,27 @@
     }
 
     function updateField(index, field, value) {
-        if (field === 'stock' || field === 'usedToday') {
+        if (field === 'stock') {
             inventory[index][field] = parseFloat(value) || 0;
         } else {
             inventory[index][field] = value;
         }
-        if(field === 'name' && inventory[index].category === 'อื่นๆ') {
-            inventory[index].category = detectCategory(value);
-        }
-        saveData();
-        renderTable();
+        syncToCloud();
     }
 
-    function updateUsed(index) {
-        let val = parseFloat(document.getElementById(`used_${index}`).value) || 0;
-        inventory[index].usedToday = val;
-        saveData();
+    function updateImage(index, input) {
+        if (input.files && input.files[0]) {
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                inventory[index].image = e.target.result;
+                syncToCloud();
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function updateUsedLocally(index, value) {
+        inventory[index].usedToday = parseFloat(value) || 0;
     }
 
     function addItem() {
@@ -275,16 +326,14 @@
             let reader = new FileReader();
             reader.onload = function(e) {
                 inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: e.target.result });
-                saveData();
+                syncToCloud();
                 resetForm();
-                renderTable();
             }
             reader.readAsDataURL(imageInput.files[0]);
         } else {
             inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: "" });
-            saveData();
+            syncToCloud();
             resetForm();
-            renderTable();
         }
     }
 
@@ -301,8 +350,7 @@
     function deleteItem(index) {
         if (confirm(`คุณต้องการลบ "${inventory[index].name}" ออกจากระบบใช่หรือไม่?`)) {
             inventory.splice(index, 1);
-            saveData();
-            renderTable();
+            syncToCloud();
         }
     }
 
@@ -320,16 +368,16 @@
                 }
             }
         });
-        saveData();
+        syncToCloud();
         alert(`✅ บันทึกตัดสต็อกประจำวันที่ ${dateStr} เรียบร้อยแล้ว!`);
-        renderTable();
     }
 
     function resetDefaultData() {
-        if (confirm("⚠️ คุณต้องการรีเซ็ตข้อมูลทั้งหมดกลับเป็นค่าเริ่มต้นใช่หรือไม่?")) {
-            localStorage.removeItem('malatang_categories');
-            localStorage.removeItem('malatang_inventory');
-            location.reload();
+        if (confirm("⚠️ คุณต้องการรีเซ็ตข้อมูลทั้งหมดในระบบคลาวด์กลับเป็นค่าเริ่มต้นใช่หรือไม่?")) {
+            categories = defaultCategories;
+            inventory = defaultInventory;
+            syncToCloud();
+            alert("🔄 รีเซ็ตข้อมูลเรียบร้อยแล้ว");
         }
     }
 
@@ -348,9 +396,6 @@
         a.download = `Malatang_Stock_${dateStr}.csv`;
         a.click();
     }
-
-    updateCategoryDropdown();
-    renderTable();
 </script>
 
 </body>
