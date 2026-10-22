@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max (Cloud Realtime)</title>
-    <!-- เรียกใช้งาน Firebase SDK -->
+    <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max (Cloud)</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <style>
@@ -17,10 +16,10 @@
             --border-color: #dee2e6;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; }
-        .container { max-width: 1200px; margin: 0 auto; background: var(--card-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        .container { max-width: 1250px; margin: 0 auto; background: var(--card-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
         
         h2 { color: var(--primary); text-align: center; margin-bottom: 5px; font-size: 1.5rem; }
-        .date-display { text-align: center; color: #6c757d; margin-bottom: 15px; font-size: 0.9rem; }
+        .date-display { text-align: center; color: #6c757d; margin-bottom: 15px; font-size: 0.9rem; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
         .date-display input { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
 
         .card { background: #fff; border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 2px 6px rgba(0,0,0,0.02); }
@@ -34,17 +33,11 @@
         .btn { background-color: #2a9d8f; color: white; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-size: 0.95rem; font-weight: 600; transition: background 0.2s, transform 0.1s; text-align: center; display: inline-flex; justify-content: center; align-items: center; gap: 5px; }
         .btn:active { transform: scale(0.98); }
         .btn-primary { background-color: var(--secondary); }
-        .btn-primary:hover { background-color: #3d6a88; }
         .btn-success { background-color: #2a9d8f; }
-        .btn-success:hover { background-color: #238579; }
         .btn-danger { background-color: #e63946; padding: 6px 10px; font-size: 0.8rem; }
-        .btn-danger:hover { background-color: #c92a3b; }
         .btn-excel { background-color: #f4a261; color: white; }
-        .btn-excel:hover { background-color: #e76f51; }
         .btn-reset { background-color: #6c757d; color: white; }
-        .btn-reset:hover { background-color: #5a6268; }
-        .btn-upload { background-color: #457b9d; color: white; padding: 4px 8px; font-size: 0.75rem; margin-top: 4px; }
-        .btn-upload:hover { background-color: #1d3557; }
+        .btn-upload { background-color: #457b9d; color: white; padding: 4px 8px; font-size: 0.75rem; margin-top: 4px; display: inline-block; cursor: pointer; border-radius: 4px; }
 
         .table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
         table { width: 100%; border-collapse: collapse; font-size: 0.88rem; white-space: nowrap; }
@@ -57,17 +50,16 @@
         
         .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
         .badge-normal { background: #e6fcf5; color: #0ca678; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
+        .supplier-tag { background: #e7f5ff; color: #1864ab; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
         
         .category-header { background-color: #e9ecef !important; text-align: left !important; font-weight: bold !important; color: #495057; font-size: 0.95rem; }
         
         .action-bar { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
-        .action-bar .btn { flex: 1; min-width: 150px; padding: 12px; font-size: 1rem; }
+        .action-bar .btn { flex: 1; min-width: 140px; padding: 12px; font-size: 0.95rem; }
 
-        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); display: flex; justify-content: center; align-items: center; z-index: 9999; font-size: 1.2rem; font-weight: bold; color: var(--secondary); }
-
-        @media (max-width: 768px) {
-            .container { padding: 8px; }
-        }
+        .filter-bar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        
+        #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; font-size: 1.2rem; font-weight: bold; color: var(--secondary); }
     </style>
 </head>
 <body>
@@ -77,7 +69,8 @@
 <div class="container">
     <h2>🔥 ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max (Cloud) 🔥</h2>
     <div class="date-display">
-        📅 วันที่ทำรายการ: <input type="date" id="recordDate">
+        <span>📅 วันที่ทำรายการ: <input type="date" id="recordDate" onchange="handleDateChange()"></span>
+        <span id="historyStatus" style="color: #e63946; font-weight: bold; display: none;">📂 กำลังดูข้อมูลย้อนหลัง</span>
     </div>
 
     <!-- 1. เพิ่มหมวดหมู่ -->
@@ -91,12 +84,18 @@
 
     <!-- 2. เพิ่มสินค้า -->
     <div class="card">
-        <h3>📦 เพิ่มรายการวัตถุดิบ</h3>
+        <h3>📦 เพิ่มรายการวัตถุดิบ & แหล่งซื้อ</h3>
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
             <input type="text" id="newCode" placeholder="รหัส (เช่น M01)">
             <input type="text" id="newName" placeholder="ชื่อวัตถุดิบ *">
             <select id="newCategory">
                 <option value="auto">🤖 แยกหมวดอัตโนมัติ</option>
+            </select>
+            <select id="newSupplier">
+                <option value="โกดังของเราเอง">🏭 โกดังของเราเอง</option>
+                <option value="มหาชัย">🦐 มหาชัย</option>
+                <option value="P&P">📦 P&P</option>
+                <option value="Makro">🛒 Makro</option>
             </select>
             <input type="text" id="newUnit" placeholder="หน่วย * (กก., ถุง)">
             <input type="number" id="newStock" placeholder="สต็อกตั้งต้น *" min="0" step="any">
@@ -113,11 +112,19 @@
 
     <!-- 3. ตารางสต็อกหลัก -->
     <div class="card">
-        <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน (Realtime)</h3>
-        <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 5px;">
-            💡 สามารถแก้ไข รหัส, ชื่อ, หมวดหมู่, หน่วย, สต็อก และกดเปลี่ยนรูปภาพได้โดยตรงในตาราง
-        </div>
+        <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน</h3>
         
+        <div class="filter-bar">
+            <span style="font-size: 0.85rem; font-weight: 600;">🔍 กรองดูตามแหล่งซื้อ:</span>
+            <select id="supplierFilter" onchange="renderTable()" style="max-width: 200px;">
+                <option value="all">🌐 แสดงทั้งหมดทุกแหล่ง</option>
+                <option value="โกดังของเราเอง">🏭 โกดังของเราเอง</option>
+                <option value="มหาชัย">🦐 มหาชัย</option>
+                <option value="P&P">📦 P&P</option>
+                <option value="Makro">🛒 Makro</option>
+            </select>
+        </div>
+
         <div class="table-responsive">
             <table id="stockTable">
                 <thead>
@@ -126,6 +133,7 @@
                         <th>รหัส</th>
                         <th>ชื่อรายการ</th>
                         <th>หมวดหมู่</th>
+                        <th>แหล่งซื้อ (Supplier)</th>
                         <th>หน่วย</th>
                         <th>คงเหลือ</th>
                         <th>เบิกใช้ (วันนี้)</th>
@@ -136,44 +144,45 @@
                         <th>จัดการ</th>
                     </tr>
                 </thead>
-                <tbody id="tableBody">
-                    <!-- โหลดข้อมูลด้วย JS -->
-                </tbody>
+                <tbody id="tableBody"></tbody>
             </table>
         </div>
 
         <div class="action-bar">
-            <button class="btn btn-success" onclick="saveDailyData()">💾 บันทึกตัดสต็อก</button>
-            <button class="btn btn-excel" onclick="exportToExcel()">📊 Excel</button>
+            <button class="btn btn-success" id="saveBtn" onclick="saveDailyData()">💾 บันทึกตัดสต็อกประจำวัน</button>
+            <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel (วันนี้)</button>
             <button class="btn btn-reset" onclick="resetDefaultData()">🔄 รีเซ็ตข้อมูลเริ่มต้น</button>
         </div>
     </div>
 </div>
 
 <script>
-       const firebaseConfig = {
+    // ⚠️ นำค่า Firebase Config ของคุณมาวางแทนที่ด้านล่างนี้
+    const firebaseConfig = {
         apiKey: "AIzaSyDie7nCV9MK1KYfmnwJ7bToD-fQPTbMOug",
         authDomain: "malatang-stock.firebaseapp.com",
         databaseURL: "https://malatang-stock-default-rtdb.asia-southeast1.firebasedatabase.app",
         projectId: "malatang-stock",
         storageBucket: "malatang-stock.firebasestorage.app",
         messagingSenderId: "767469911960",
-        appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed"
+        appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed",
     };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    document.getElementById('recordDate').valueAsDate = new Date();
+    const todayStr = new Date().toISOString().split('T')[0];
+    document.getElementById('recordDate').value = todayStr;
 
     let categories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
     let inventory = [];
+    let dailyLogs = {};
 
     let defaultCategories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
     let defaultInventory = [
-        { code: "M01", name: "เส้นหนุบจีน", category: "เส้น", unit: "ถุง", stock: 12, usedToday: 0, total7Days: 28, note: "แช่น้ำก่อนใช้", image: "" },
-        { code: "M03", name: "สามชั้นสไลด์", category: "เนื้อสัตว์", unit: "แพ็ค", stock: 15, usedToday: 0, total7Days: 52, note: "ช่องฟรีซตู้ล่าง", image: "" },
-        { code: "M05", name: "ผักบุ้ง", category: "ผัก", unit: "กก.", stock: 5.5, usedToday: 0, total7Days: 14.5, note: "รับของสดทุกเช้า", image: "" }
+        { code: "M01", name: "เส้นหนุบจีน", category: "เส้น", supplier: "โกดังของเราเอง", unit: "ถุง", stock: 12, usedToday: 0, total7Days: 28, note: "แช่น้ำก่อนใช้", image: "" },
+        { code: "M03", name: "สามชั้นสไลด์", category: "เนื้อสัตว์", supplier: "Makro", unit: "แพ็ค", stock: 15, usedToday: 0, total7Days: 52, note: "ช่องฟรีซตู้ล่าง", image: "" },
+        { code: "M05", name: "ผักบุ้ง", category: "ผัก", supplier: "มหาชัย", unit: "กก.", stock: 5.5, usedToday: 0, total7Days: 14.5, note: "รับของสดทุกเช้า", image: "" }
     ];
 
     db.ref('malatang_stock').on('value', (snapshot) => {
@@ -181,23 +190,26 @@
         if (data) {
             categories = data.categories || defaultCategories;
             inventory = data.inventory || defaultInventory;
+            dailyLogs = data.dailyLogs || {};
         } else {
             categories = defaultCategories;
             inventory = defaultInventory;
+            dailyLogs = {};
             syncToCloud();
         }
         updateCategoryDropdown();
-        renderTable();
+        loadDataForSelectedDate();
         document.getElementById('loadingOverlay').style.display = 'none';
     }, (error) => {
-        alert("เกิดข้อผิดพลาดในการเชื่อมต่อฐานข้อมูล: " + error.message);
+        alert("เกิดข้อผิดพลาด: " + error.message);
         document.getElementById('loadingOverlay').style.display = 'none';
     });
 
     function syncToCloud() {
         db.ref('malatang_stock').set({
             categories: categories,
-            inventory: inventory
+            inventory: inventory,
+            dailyLogs: dailyLogs
         });
     }
 
@@ -224,13 +236,49 @@
 
     function detectCategory(name) {
         let n = name.toLowerCase();
-        if (n.includes("ผัก") || n.includes("กวางตุ้ง") || n.includes("เห็ด") || n.includes("คะน้า") || n.includes("ผักบุ้ง")) return "ผัก";
-        if (n.includes("หมู") || n.includes("เนื้อ") || n.includes("ไก่") || n.includes("สามชั้น") || n.includes("กุ้ง") || n.includes("ปลาหมึก")) return "เนื้อสัตว์";
-        if (n.includes("เส้น") || n.includes("บะหมี่") || n.includes("มาม่า") || n.includes("วุ้นเส้น") || n.includes("อูดง")) return "เส้น";
-        if (n.includes("เต้าหู้") || n.includes("ฟองเต้าหู้")) return "เต้าหู้";
-        if (n.includes("เกี๊ยว") || n.includes("ลูกชิ้น") || n.includes("ปูอัด") || n.includes("ชีสบอล")) return "อาหารแช่แข็ง";
-        if (n.includes("ซุป") || n.includes("น้ำพริก") || n.includes("น้ำจิ้ม") || n.includes("เครื่องปรุง")) return "เครื่องปรุง/น้ำซุป";
+        if (n.includes("ผัก") || n.includes("เห็ด") || n.includes("กวางตุ้ง")) return "ผัก";
+        if (n.includes("หมู") || n.includes("เนื้อ") || n.includes("ไก่") || n.includes("สามชั้น") || n.includes("กุ้ง")) return "เนื้อสัตว์";
+        if (n.includes("เส้น") || n.includes("บะหมี่") || n.includes("วุ้นเส้น")) return "เส้น";
+        if (n.includes("เต้าหู้")) return "เต้าหู้";
+        if (n.includes("เกี๊ยว") || n.includes("ลูกชิ้น") || n.includes("ปูอัด")) return "อาหารแช่แข็ง";
+        if (n.includes("ซุป") || n.includes("น้ำจิ้ม") || n.includes("น้ำพริก")) return "เครื่องปรุง/น้ำซุป";
         return categories.length > 0 ? categories[0] : "อื่นๆ";
+    }
+
+    function handleDateChange() {
+        loadDataForSelectedDate();
+    }
+
+    function loadDataForSelectedDate() {
+        let selectedDate = document.getElementById("recordDate").value;
+        let isPast = selectedDate !== todayStr;
+        
+        let statusTag = document.getElementById("historyStatus");
+        let saveBtn = document.getElementById("saveBtn");
+
+        if (isPast) {
+            statusTag.style.display = "inline";
+            saveBtn.disabled = true;
+            saveBtn.style.opacity = "0.5";
+            
+            // โหลดข้อมูลเก่าของวันนั้นถ้ามีบันทึกไว้
+            if (dailyLogs[selectedDate] && dailyLogs[selectedDate].inventory) {
+                inventory = JSON.parse(JSON.stringify(dailyLogs[selectedDate].inventory));
+            } else {
+                // ถ้าไม่มีประวัติวันนั้น ให้ใช้สต็อกปัจจุบันจำลอง
+                inventory.forEach(item => item.usedToday = 0);
+            }
+        } else {
+            statusTag.style.display = "none";
+            saveBtn.disabled = false;
+            saveBtn.style.opacity = "1";
+            // รีโหลดข้อมูลปัจจุบันจาก root ถ้ากลับมาวันปัจจุบัน
+            db.ref('malatang_stock/inventory').once('value', (snap) => {
+                if(snap.val()) inventory = snap.val();
+                renderTable();
+            });
+        }
+        renderTable();
     }
 
     function renderTable() {
@@ -238,17 +286,24 @@
         if(!tbody) return;
         tbody.innerHTML = "";
         
+        let supplierFilter = document.getElementById("supplierFilter").value;
+
+        let filteredInventory = inventory.filter(item => {
+            let matchSupplier = (supplierFilter === 'all' || (item.supplier || "โกดังของเราเอง") === supplierFilter);
+            return matchSupplier;
+        });
+
         let allCats = [...categories];
-        inventory.forEach(item => {
+        filteredInventory.forEach(item => {
             let cat = item.category || "อื่นๆ";
             if (!allCats.includes(cat)) allCats.push(cat);
         });
 
         allCats.forEach(cat => {
-            let itemsInCat = inventory.filter(item => (item.category || "อื่นๆ") === cat);
+            let itemsInCat = filteredInventory.filter(item => (item.category || "อื่นๆ") === cat);
             if (itemsInCat.length === 0) return;
 
-            let catRow = `<tr><td colspan="12" class="category-header">📁 หมวด: ${cat}</td></tr>`;
+            let catRow = `<tr><td colspan="13" class="category-header">📁 หมวด: ${cat}</td></tr>`;
             tbody.innerHTML += catRow;
 
             itemsInCat.forEach((item) => {
@@ -257,22 +312,28 @@
                 let statusHTML = item.stock <= 3 ? '<span class="badge-alert">⚠️ สั่งเพิ่มด่วน</span>' : '<span class="badge-normal">ปกติ</span>';
                 
                 let imgHTML = item.image 
-                    ? `<img src="${item.image}" class="item-img"><br><label class="btn btn-upload">📷 เปลี่ยนรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`
-                    : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><br><label class="btn btn-upload">📷 เพิ่มรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
+                    ? `<img src="${item.image}" class="item-img"><label class="btn btn-upload">📷 เปลี่ยนรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`
+                    : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><label class="btn btn-upload">📷 เพิ่มรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
 
                 let catOptions = allCats.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
+                let supList = ["โกดังของเราเอง", "มหาชัย", "P&P", "Makro"];
+                let supOptions = supList.map(s => `<option value="${s}" ${s === (item.supplier || "โกดังของเราเอง") ? 'selected' : ''}>${s}</option>`).join('');
+
+                let isPast = document.getElementById("recordDate").value !== todayStr;
+                let disabledAttr = isPast ? 'disabled style="background:#e9ecef;"' : '';
 
                 let row = `<tr>
                     <td>${imgHTML}</td>
                     <td><input type="text" value="${item.code || ''}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'code', this.value)"></td>
-                    <td><input type="text" value="${item.name}" style="width:120px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
-                    <td><select style="width:100px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
-                    <td><input type="text" value="${item.unit}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
-                    <td><input type="number" step="any" value="${item.stock}" class="editable-input" onchange="updateField(${index}, 'stock', parseFloat(this.value)||0)"></td>
-                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday}" style="width:65px; text-align:center; padding:4px;" onchange="updateUsedLocally(${index}, this.value)"></td>
+                    <td><input type="text" value="${item.name}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
+                    <td><select style="width:90px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
+                    <td><select style="width:110px; padding:4px;" onchange="updateField(${index}, 'supplier', this.value)">${supOptions}</select></td>
+                    <td><input type="text" value="${item.unit}" style="width:50px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
+                    <td><input type="number" step="any" value="${item.stock}" class="editable-input" ${disabledAttr} onchange="updateField(${index}, 'stock', parseFloat(this.value)||0)"></td>
+                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday}" style="width:60px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateUsedLocally(${index}, this.value)"></td>
                     <td>${item.total7Days}</td>
                     <td>${avgDaily}</td>
-                    <td><input type="text" value="${item.note || ''}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
+                    <td><input type="text" value="${item.note || ''}" style="width:100px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
                     <td>${statusHTML}</td>
                     <td><button class="btn btn-danger" onclick="deleteItem(${index})">🗑️ ลบ</button></td>
                 </tr>`;
@@ -309,6 +370,7 @@
         let code = document.getElementById("newCode").value.trim();
         let name = document.getElementById("newName").value.trim();
         let catSelect = document.getElementById("newCategory").value;
+        let supplier = document.getElementById("newSupplier").value;
         let unit = document.getElementById("newUnit").value.trim();
         let stock = parseFloat(document.getElementById("newStock").value);
         let note = document.getElementById("newNote").value.trim();
@@ -324,13 +386,13 @@
         if (imageInput.files && imageInput.files[0]) {
             let reader = new FileReader();
             reader.onload = function(e) {
-                inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: e.target.result });
+                inventory.push({ code, name, category, supplier, unit, stock, usedToday: 0, total7Days: stock, note, image: e.target.result });
                 syncToCloud();
                 resetForm();
             }
             reader.readAsDataURL(imageInput.files[0]);
         } else {
-            inventory.push({ code, name, category, unit, stock, usedToday: 0, total7Days: stock, note, image: "" });
+            inventory.push({ code, name, category, supplier, unit, stock, usedToday: 0, total7Days: stock, note, image: "" });
             syncToCloud();
             resetForm();
         }
@@ -355,6 +417,11 @@
 
     function saveDailyData() {
         let dateStr = document.getElementById("recordDate").value;
+        if (dateStr !== todayStr) {
+            alert("ไม่สามารถบันทึกทับข้อมูลย้อนหลังได้ บันทึกได้เฉพาะวันที่ปัจจุบันเท่านั้น!");
+            return;
+        }
+
         inventory.forEach((item, index) => {
             let inputElem = document.getElementById(`used_${index}`);
             if (inputElem) {
@@ -363,10 +430,18 @@
                     item.stock = parseFloat((item.stock - val).toFixed(2)); 
                     if (item.stock < 0) item.stock = 0;
                     item.total7Days = parseFloat((item.total7Days + val).toFixed(2)); 
-                    item.usedToday = 0; 
+                    item.usedToday = val; // บันทึกยอดใช้ของวันนี้ไว้
                 }
             }
         });
+
+        // บันทึกลง Log ประจำวัน
+        if(!dailyLogs) dailyLogs = {};
+        dailyLogs[dateStr] = {
+            date: dateStr,
+            inventory: JSON.parse(JSON.stringify(inventory))
+        };
+
         syncToCloud();
         alert(`✅ บันทึกตัดสต็อกประจำวันที่ ${dateStr} เรียบร้อยแล้ว!`);
     }
@@ -375,6 +450,7 @@
         if (confirm("⚠️ คุณต้องการรีเซ็ตข้อมูลทั้งหมดในระบบคลาวด์กลับเป็นค่าเริ่มต้นใช่หรือไม่?")) {
             categories = defaultCategories;
             inventory = defaultInventory;
+            dailyLogs = {};
             syncToCloud();
             alert("🔄 รีเซ็ตข้อมูลเรียบร้อยแล้ว");
         }
@@ -382,12 +458,14 @@
 
     function exportToExcel() {
         let dateStr = document.getElementById("recordDate").value;
-        let csv = '\uFEFFรหัสสินค้า,ชื่อรายการ,หมวดหมู่,หน่วย,คงเหลือปัจจุบัน,ยอดใช้รวม (7 วัน),เฉลี่ยต่อวัน,หมายเหตุ,สถานะ\n';
+        let csv = '\uFEFFรหัสสินค้า,ชื่อรายการ,หมวดหมู่,แหล่งซื้อ (Supplier),หน่วย,คงเหลือปัจจุบัน,เบิกใช้ในวัน,ยอดใช้รวม (7 วัน),เฉลี่ยต่อวัน,หมายเหตุ,สถานะ\n';
+        
         inventory.forEach(item => {
             let avgDaily = (item.total7Days / 7).toFixed(1);
             let statusText = item.stock <= 3 ? 'สั่งเพิ่มด่วน' : 'ปกติ';
-            csv += `"${item.code || ''}","${item.name}","${item.category || 'อื่นๆ'}","${item.unit}",${item.stock},${item.total7Days},${avgDaily},"${item.note || ''}","${statusText}"\n`;
+            csv += `"${item.code || ''}","${item.name}","${item.category || 'อื่นๆ'}","${item.supplier || 'โกดังของเราเอง'}","${item.unit}",${item.stock},${item.usedToday || 0},${item.total7Days},${avgDaily},"${item.note || ''}","${statusText}"\n`;
         });
+
         let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         let url = URL.createObjectURL(blob);
         let a = document.createElement('a');
