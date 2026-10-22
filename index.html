@@ -16,7 +16,7 @@
             --border-color: #dee2e6;
         }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg-color); color: var(--text-color); margin: 0; padding: 10px; }
-        .container { max-width: 1250px; margin: 0 auto; background: var(--card-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+        .container { max-width: 1400px; margin: 0 auto; background: var(--card-bg); padding: 15px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
         
         h2 { color: var(--primary); text-align: center; margin-bottom: 5px; font-size: 1.5rem; }
         .date-display { text-align: center; color: #6c757d; margin-bottom: 15px; font-size: 0.9rem; display: flex; justify-content: center; align-items: center; gap: 10px; flex-wrap: wrap; }
@@ -40,24 +40,25 @@
         .btn-upload { background-color: #457b9d; color: white; padding: 4px 8px; font-size: 0.75rem; margin-top: 4px; display: inline-block; cursor: pointer; border-radius: 4px; }
 
         .table-responsive { width: 100%; overflow-x: auto; margin-top: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
-        table { width: 100%; border-collapse: collapse; font-size: 0.88rem; white-space: nowrap; }
-        th, td { padding: 10px 8px; text-align: center; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; white-space: nowrap; }
+        th, td { padding: 10px 6px; text-align: center; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
         th { background-color: #f1faee; color: #1d3557; font-weight: 600; }
         tr:last-child td { border-bottom: none; }
         
-        .item-img { width: 45px; height: 45px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border-color); display: block; margin: 0 auto; }
-        .editable-input { width: 75px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
+        .item-img { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); display: block; margin: 0 auto; }
+        .editable-input { width: 65px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
         
-        .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
-        .badge-normal { background: #e6fcf5; color: #0ca678; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.8rem; display: inline-block; }
-        .supplier-tag { background: #e7f5ff; color: #1864ab; padding: 3px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: 600; }
+        .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; display: inline-block; }
+        .badge-normal { background: #e6fcf5; color: #0ca678; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; display: inline-block; }
         
         .category-header { background-color: #e9ecef !important; text-align: left !important; font-weight: bold !important; color: #495057; font-size: 0.95rem; }
         
         .action-bar { display: flex; gap: 10px; margin-top: 15px; flex-wrap: wrap; }
         .action-bar .btn { flex: 1; min-width: 140px; padding: 12px; font-size: 0.95rem; }
 
-        .filter-bar { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; align-items: center; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .filter-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 12px; background: #f8f9fa; padding: 10px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .filter-group { display: flex; flex-direction: column; gap: 4px; }
+        .filter-group label { font-size: 0.8rem; font-weight: 600; color: #495057; }
         
         #loadingOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.9); display: flex; justify-content: center; align-items: center; z-index: 9999; font-size: 1.2rem; font-weight: bold; color: var(--secondary); }
     </style>
@@ -73,18 +74,29 @@
         <span id="historyStatus" style="color: #e63946; font-weight: bold; display: none;">📂 กำลังดูข้อมูลย้อนหลัง</span>
     </div>
 
-    <!-- 1. เพิ่มหมวดหมู่ -->
-    <div class="card">
-        <h3>📁 เพิ่มหมวดหมู่ใหม่</h3>
-        <div class="form-grid" style="grid-template-columns: 1fr auto;">
-            <input type="text" id="newCategoryName" placeholder="ชื่อหมวดหมู่ (เช่น เครื่องดื่ม)">
-            <button class="btn btn-primary" onclick="addCategory()">➕ เพิ่มหมวดหมู่</button>
+    <!-- จัดการพาร์ทเนอร์และหมวดหมู่ -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+        <div class="card">
+            <h3>🤝 เพิ่มพาร์ทเนอร์/ร้านค้าใหม่</h3>
+            <div class="form-grid" style="grid-template-columns: 1fr auto;">
+                <input type="text" id="newPartnerName" placeholder="ชื่อพาร์ทเนอร์ (เช่น แม็คโคร, ตลาดสด)">
+                <button class="btn btn-primary" onclick="addPartner()">➕ เพิ่มพาร์ทเนอร์</button>
+            </div>
+            <div id="partnerListContainer" style="margin-top: 10px; font-size: 0.85rem; color: #555;"></div>
+        </div>
+
+        <div class="card">
+            <h3>📁 เพิ่มหมวดหมู่ใหม่</h3>
+            <div class="form-grid" style="grid-template-columns: 1fr auto;">
+                <input type="text" id="newCategoryName" placeholder="ชื่อหมวดหมู่ (เช่น เครื่องดื่ม)">
+                <button class="btn btn-primary" onclick="addCategory()">➕ เพิ่มหมวดหมู่</button>
+            </div>
         </div>
     </div>
 
-    <!-- 2. เพิ่มสินค้า -->
+    <!-- เพิ่มสินค้า -->
     <div class="card">
-        <h3>📦 เพิ่มรายการวัตถุดิบ & แหล่งซื้อ</h3>
+        <h3>📦 เพิ่มรายการวัตถุดิบ & แหล่งซื้อประจำสัปดาห์</h3>
         <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));">
             <input type="text" id="newCode" placeholder="รหัส (เช่น M01)">
             <input type="text" id="newName" placeholder="ชื่อวัตถุดิบ *">
@@ -92,10 +104,17 @@
                 <option value="auto">🤖 แยกหมวดอัตโนมัติ</option>
             </select>
             <select id="newSupplier">
-                <option value="โกดังของเราเอง">🏭 โกดังของเราเอง</option>
-                <option value="มหาชัย">🦐 มหาชัย</option>
-                <option value="P&P">📦 P&P</option>
-                <option value="Makro">🛒 Makro</option>
+                <!-- เติมผ่าน JS -->
+            </select>
+            <select id="newOrderDay">
+                <option value="ทุกวัน">📅 สั่งทุกวัน</option>
+                <option value="วันจันทร์">📌 สั่งทุกวันจันทร์</option>
+                <option value="วันอังคาร">📌 สั่งทุกวันอังคาร</option>
+                <option value="วันพุธ">📌 สั่งทุกวันพุธ</option>
+                <option value="วันพฤหัสบดี">📌 สั่งทุกวันพฤหัสบดี</option>
+                <option value="วันศุกร์">📌 สั่งทุกวันศุกร์</option>
+                <option value="วันเสาร์">📌 สั่งทุกวันเสาร์</option>
+                <option value="วันอาทิตย์">📌 สั่งทุกวันอาทิตย์</option>
             </select>
             <input type="text" id="newUnit" placeholder="หน่วย * (กก., ถุง)">
             <input type="number" id="newStock" placeholder="สต็อกตั้งต้น *" min="0" step="any">
@@ -110,19 +129,31 @@
         </div>
     </div>
 
-    <!-- 3. ตารางสต็อกหลัก -->
+    <!-- ตารางสต็อกหลัก -->
     <div class="card">
-        <h3>📋 ตารางเช็คสต็อก & ตัดยอดรายวัน</h3>
+        <h3>📋 ตารางเช็คสต็อก & สั่งซื้อรายสัปดาห์</h3>
         
-        <div class="filter-bar">
-            <span style="font-size: 0.85rem; font-weight: 600;">🔍 กรองดูตามแหล่งซื้อ:</span>
-            <select id="supplierFilter" onchange="renderTable()" style="max-width: 200px;">
-                <option value="all">🌐 แสดงทั้งหมดทุกแหล่ง</option>
-                <option value="โกดังของเราเอง">🏭 โกดังของเราเอง</option>
-                <option value="มหาชัย">🦐 มหาชัย</option>
-                <option value="P&P">📦 P&P</option>
-                <option value="Makro">🛒 Makro</option>
-            </select>
+        <div class="filter-container">
+            <div class="filter-group">
+                <label>🔍 กรองตามแหล่งซื้อ (Supplier):</label>
+                <select id="supplierFilter" onchange="renderTable()">
+                    <option value="all">🌐 แสดงทุกแหล่งซื้อ</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>📅 กรองตามวันสั่งซื้อประจำสัปดาห์:</label>
+                <select id="dayFilter" onchange="renderTable()">
+                    <option value="all">🗓️ แสดงทุกวันสั่งซื้อ</option>
+                    <option value="ทุกวัน">📅 สั่งทุกวัน</option>
+                    <option value="วันจันทร์">วันจันทร์</option>
+                    <option value="วันอังคาร">วันอังคาร</option>
+                    <option value="วันพุธ">วันพุธ</option>
+                    <option value="วันพฤหัสบดี">วันพฤหัสบดี</option>
+                    <option value="วันศุกร์">วันศุกร์</option>
+                    <option value="วันเสาร์">วันเสาร์</option>
+                    <option value="วันอาทิตย์">วันอาทิตย์</option>
+                </select>
+            </div>
         </div>
 
         <div class="table-responsive">
@@ -133,9 +164,11 @@
                         <th>รหัส</th>
                         <th>ชื่อรายการ</th>
                         <th>หมวดหมู่</th>
-                        <th>แหล่งซื้อ (Supplier)</th>
+                        <th>แหล่งซื้อ</th>
+                        <th>วันสั่งซื้อ</th>
                         <th>หน่วย</th>
                         <th>คงเหลือ</th>
+                        <th>รับเข้า (ซื้อเพิ่ม)</th>
                         <th>เบิกใช้ (วันนี้)</th>
                         <th>ยอดใช้ (7 วัน)</th>
                         <th>เฉลี่ย/วัน</th>
@@ -149,7 +182,7 @@
         </div>
 
         <div class="action-bar">
-            <button class="btn btn-success" id="saveBtn" onclick="saveDailyData()">💾 บันทึกตัดสต็อกประจำวัน</button>
+            <button class="btn btn-success" id="saveBtn" onclick="saveDailyData()">💾 บันทึกตัดสต็อก & รับของประจำวัน</button>
             <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel (วันนี้)</button>
             <button class="btn btn-reset" onclick="resetDefaultData()">🔄 รีเซ็ตข้อมูลเริ่มต้น</button>
         </div>
@@ -175,29 +208,38 @@
     document.getElementById('recordDate').value = todayStr;
 
     let categories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
+    let partners = ["โกดังของเราเอง", "มหาชัย", "P&P", "Makro"];
     let inventory = [];
     let dailyLogs = {};
 
     let defaultCategories = ["ผัก", "เนื้อสัตว์", "เส้น", "เต้าหู้", "อาหารแช่แข็ง", "เครื่องปรุง/น้ำซุป"];
+    let defaultPartners = ["โกดังของเราเอง", "มหาชัย", "P&P", "Makro"];
     let defaultInventory = [
-        { code: "M01", name: "เส้นหนุบจีน", category: "เส้น", supplier: "โกดังของเราเอง", unit: "ถุง", stock: 12, usedToday: 0, total7Days: 28, note: "แช่น้ำก่อนใช้", image: "" },
-        { code: "M03", name: "สามชั้นสไลด์", category: "เนื้อสัตว์", supplier: "Makro", unit: "แพ็ค", stock: 15, usedToday: 0, total7Days: 52, note: "ช่องฟรีซตู้ล่าง", image: "" },
-        { code: "M05", name: "ผักบุ้ง", category: "ผัก", supplier: "มหาชัย", unit: "กก.", stock: 5.5, usedToday: 0, total7Days: 14.5, note: "รับของสดทุกเช้า", image: "" }
+        { code: "M01", name: "เส้นหนุบจีน", category: "เส้น", supplier: "โกดังของเราเอง", orderDay: "วันจันทร์", unit: "ถุง", stock: 12, buyQty: 0, usedToday: 0, total7Days: 28, note: "แช่น้ำก่อนใช้", image: "" },
+        { code: "M03", name: "สามชั้นสไลด์", category: "เนื้อสัตว์", supplier: "Makro", orderDay: "ทุกวัน", unit: "แพ็ค", stock: 15, buyQty: 0, usedToday: 0, total7Days: 52, note: "ช่องฟรีซตู้ล่าง", image: "" },
+        { code: "M05", name: "ผักบุ้ง", category: "ผัก", supplier: "มหาชัย", orderDay: "วันพฤหัสบดี", unit: "กก.", stock: 5.5, buyQty: 0, usedToday: 0, total7Days: 14.5, note: "รับของสดทุกเช้า", image: "" }
     ];
 
     db.ref('malatang_stock').on('value', (snapshot) => {
         let data = snapshot.val();
         if (data) {
             categories = data.categories || defaultCategories;
+            partners = data.partners || defaultPartners;
             inventory = data.inventory || defaultInventory;
             dailyLogs = data.dailyLogs || {};
+            inventory.forEach(item => {
+                if(item.buyQty === undefined) item.buyQty = 0;
+                if(!item.orderDay) item.orderDay = "ทุกวัน";
+                if(!item.supplier) item.supplier = partners[0];
+            });
         } else {
             categories = defaultCategories;
+            partners = defaultPartners;
             inventory = defaultInventory;
             dailyLogs = {};
             syncToCloud();
         }
-        updateCategoryDropdown();
+        updateDropdowns();
         loadDataForSelectedDate();
         document.getElementById('loadingOverlay').style.display = 'none';
     }, (error) => {
@@ -208,20 +250,74 @@
     function syncToCloud() {
         db.ref('malatang_stock').set({
             categories: categories,
+            partners: partners,
             inventory: inventory,
             dailyLogs: dailyLogs
         });
     }
 
-    function updateCategoryDropdown() {
-        let select = document.getElementById("newCategory");
-        if(!select) return;
-        let currentVal = select.value;
-        select.innerHTML = '<option value="auto">🤖 แยกหมวดอัตโนมัติ</option>';
-        categories.forEach(cat => {
-            select.innerHTML += `<option value="${cat}">${cat}</option>`;
-        });
-        select.value = currentVal;
+    function updateDropdowns() {
+        // อัปเดต Category Dropdown
+        let catSelect = document.getElementById("newCategory");
+        if(catSelect) {
+            let currentCat = catSelect.value;
+            catSelect.innerHTML = '<option value="auto">🤖 แยกหมวดอัตโนมัติ</option>';
+            categories.forEach(cat => {
+                catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+            catSelect.value = currentCat;
+        }
+
+        // อัปเดต Partner Dropdown ในฟอร์มเพิ่มสินค้า
+        let supSelect = document.getElementById("newSupplier");
+        if(supSelect) {
+            let currentSup = supSelect.value;
+            supSelect.innerHTML = '';
+            partners.forEach(sup => {
+                supSelect.innerHTML += `<option value="${sup}">${sup}</option>`;
+            });
+            supSelect.value = currentSup;
+        }
+
+        // อัปเดต Partner Filter ในตาราง
+        let filterSelect = document.getElementById("supplierFilter");
+        if(filterSelect) {
+            let currentFilter = filterSelect.value;
+            filterSelect.innerHTML = '<option value="all">🌐 แสดงทุกแหล่งซื้อ</option>';
+            partners.forEach(sup => {
+                filterSelect.innerHTML += `<option value="${sup}">${sup}</option>`;
+            });
+            filterSelect.value = currentFilter;
+        }
+
+        // แสดงรายชื่อพาร์ทเนอร์ด้านบน
+        let pContainer = document.getElementById("partnerListContainer");
+        if(pContainer) {
+            pContainer.innerHTML = partners.map((p, idx) => `
+                <span style="display:inline-block; background:#e9ecef; padding:3px 8px; border-radius:4px; margin:2px; font-size:0.8rem;">
+                    ${p} ${partners.length > 1 ? `<span onclick="deletePartner(${idx})" style="color:red; cursor:pointer; font-weight:bold; margin-left:4px;">&times;</span>` : ''}
+                </span>
+            `).join('');
+        }
+    }
+
+    function addPartner() {
+        let pName = document.getElementById("newPartnerName").value.trim();
+        if (!pName) { alert("กรุณากรอกชื่อพาร์ทเนอร์!"); return; }
+        if (partners.includes(pName)) { alert("มีพาร์ทเนอร์นี้อยู่แล้ว!"); return; }
+        partners.push(pName);
+        document.getElementById("newPartnerName").value = "";
+        syncToCloud();
+        alert(`✅ เพิ่มพาร์ทเนอร์ "${pName}" สำเร็จ!`);
+    }
+
+    function deletePartner(index) {
+        if (partners.length <= 1) { alert("ต้องมีพาร์ทเนอร์อย่างน้อย 1 รายการ"); return; }
+        let removed = partners[index];
+        if (confirm(`คุณต้องการลบพาร์ทเนอร์ "${removed}" ใช่หรือไม่?`)) {
+            partners.splice(index, 1);
+            syncToCloud();
+        }
     }
 
     function addCategory() {
@@ -261,20 +357,24 @@
             saveBtn.disabled = true;
             saveBtn.style.opacity = "0.5";
             
-            // โหลดข้อมูลเก่าของวันนั้นถ้ามีบันทึกไว้
             if (dailyLogs[selectedDate] && dailyLogs[selectedDate].inventory) {
                 inventory = JSON.parse(JSON.stringify(dailyLogs[selectedDate].inventory));
             } else {
-                // ถ้าไม่มีประวัติวันนั้น ให้ใช้สต็อกปัจจุบันจำลอง
-                inventory.forEach(item => item.usedToday = 0);
+                inventory.forEach(item => { item.usedToday = 0; item.buyQty = 0; });
             }
         } else {
             statusTag.style.display = "none";
             saveBtn.disabled = false;
             saveBtn.style.opacity = "1";
-            // รีโหลดข้อมูลปัจจุบันจาก root ถ้ากลับมาวันปัจจุบัน
             db.ref('malatang_stock/inventory').once('value', (snap) => {
-                if(snap.val()) inventory = snap.val();
+                if(snap.val()) {
+                    inventory = snap.val();
+                    inventory.forEach(item => {
+                        if(item.buyQty === undefined) item.buyQty = 0;
+                        if(!item.orderDay) item.orderDay = "ทุกวัน";
+                        if(!item.supplier) item.supplier = partners[0];
+                    });
+                }
                 renderTable();
             });
         }
@@ -287,10 +387,12 @@
         tbody.innerHTML = "";
         
         let supplierFilter = document.getElementById("supplierFilter").value;
+        let dayFilter = document.getElementById("dayFilter").value;
 
         let filteredInventory = inventory.filter(item => {
-            let matchSupplier = (supplierFilter === 'all' || (item.supplier || "โกดังของเราเอง") === supplierFilter);
-            return matchSupplier;
+            let matchSupplier = (supplierFilter === 'all' || (item.supplier || partners[0]) === supplierFilter);
+            let matchDay = (dayFilter === 'all' || (item.orderDay || "ทุกวัน") === dayFilter);
+            return matchSupplier && matchDay;
         });
 
         let allCats = [...categories];
@@ -303,7 +405,7 @@
             let itemsInCat = filteredInventory.filter(item => (item.category || "อื่นๆ") === cat);
             if (itemsInCat.length === 0) return;
 
-            let catRow = `<tr><td colspan="13" class="category-header">📁 หมวด: ${cat}</td></tr>`;
+            let catRow = `<tr><td colspan="15" class="category-header">📁 หมวด: ${cat}</td></tr>`;
             tbody.innerHTML += catRow;
 
             itemsInCat.forEach((item) => {
@@ -316,24 +418,28 @@
                     : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><label class="btn btn-upload">📷 เพิ่มรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
 
                 let catOptions = allCats.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
-                let supList = ["โกดังของเราเอง", "มหาชัย", "P&P", "Makro"];
-                let supOptions = supList.map(s => `<option value="${s}" ${s === (item.supplier || "โกดังของเราเอง") ? 'selected' : ''}>${s}</option>`).join('');
+                let supOptions = partners.map(s => `<option value="${s}" ${s === (item.supplier || partners[0]) ? 'selected' : ''}>${s}</option>`).join('');
+
+                let dayList = ["ทุกวัน", "วันจันทร์", "วันอังคาร", "วันพุธ", "วันพฤหัสบดี", "วันศุกร์", "วันเสาร์", "วันอาทิตย์"];
+                let dayOptions = dayList.map(d => `<option value="${d}" ${d === (item.orderDay || "ทุกวัน") ? 'selected' : ''}>${d}</option>`).join('');
 
                 let isPast = document.getElementById("recordDate").value !== todayStr;
                 let disabledAttr = isPast ? 'disabled style="background:#e9ecef;"' : '';
 
                 let row = `<tr>
                     <td>${imgHTML}</td>
-                    <td><input type="text" value="${item.code || ''}" style="width:55px; text-align:center; padding:4px;" onchange="updateField(${index}, 'code', this.value)"></td>
-                    <td><input type="text" value="${item.name}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
-                    <td><select style="width:90px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
-                    <td><select style="width:110px; padding:4px;" onchange="updateField(${index}, 'supplier', this.value)">${supOptions}</select></td>
-                    <td><input type="text" value="${item.unit}" style="width:50px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
+                    <td><input type="text" value="${item.code || ''}" style="width:50px; text-align:center; padding:4px;" onchange="updateField(${index}, 'code', this.value)"></td>
+                    <td><input type="text" value="${item.name}" style="width:100px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
+                    <td><select style="width:85px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
+                    <td><select style="width:105px; padding:4px;" onchange="updateField(${index}, 'supplier', this.value)">${supOptions}</select></td>
+                    <td><select style="width:95px; padding:4px;" onchange="updateField(${index}, 'orderDay', this.value)">${dayOptions}</select></td>
+                    <td><input type="text" value="${item.unit}" style="width:45px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
                     <td><input type="number" step="any" value="${item.stock}" class="editable-input" ${disabledAttr} onchange="updateField(${index}, 'stock', parseFloat(this.value)||0)"></td>
-                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday}" style="width:60px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateUsedLocally(${index}, this.value)"></td>
+                    <td><input type="number" step="any" id="buy_${index}" value="${item.buyQty || 0}" style="width:60px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateBuyLocally(${index}, this.value)"></td>
+                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday || 0}" style="width:60px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateUsedLocally(${index}, this.value)"></td>
                     <td>${item.total7Days}</td>
                     <td>${avgDaily}</td>
-                    <td><input type="text" value="${item.note || ''}" style="width:100px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
+                    <td><input type="text" value="${item.note || ''}" style="width:90px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
                     <td>${statusHTML}</td>
                     <td><button class="btn btn-danger" onclick="deleteItem(${index})">🗑️ ลบ</button></td>
                 </tr>`;
@@ -362,6 +468,10 @@
         }
     }
 
+    function updateBuyLocally(index, value) {
+        inventory[index].buyQty = parseFloat(value) || 0;
+    }
+
     function updateUsedLocally(index, value) {
         inventory[index].usedToday = parseFloat(value) || 0;
     }
@@ -371,6 +481,7 @@
         let name = document.getElementById("newName").value.trim();
         let catSelect = document.getElementById("newCategory").value;
         let supplier = document.getElementById("newSupplier").value;
+        let orderDay = document.getElementById("newOrderDay").value;
         let unit = document.getElementById("newUnit").value.trim();
         let stock = parseFloat(document.getElementById("newStock").value);
         let note = document.getElementById("newNote").value.trim();
@@ -386,13 +497,13 @@
         if (imageInput.files && imageInput.files[0]) {
             let reader = new FileReader();
             reader.onload = function(e) {
-                inventory.push({ code, name, category, supplier, unit, stock, usedToday: 0, total7Days: stock, note, image: e.target.result });
+                inventory.push({ code, name, category, supplier, orderDay, unit, stock, buyQty: 0, usedToday: 0, total7Days: stock, note, image: e.target.result });
                 syncToCloud();
                 resetForm();
             }
             reader.readAsDataURL(imageInput.files[0]);
         } else {
-            inventory.push({ code, name, category, supplier, unit, stock, usedToday: 0, total7Days: stock, note, image: "" });
+            inventory.push({ code, name, category, supplier, orderDay, unit, stock, buyQty: 0, usedToday: 0, total7Days: stock, note, image: "" });
             syncToCloud();
             resetForm();
         }
@@ -423,19 +534,23 @@
         }
 
         inventory.forEach((item, index) => {
-            let inputElem = document.getElementById(`used_${index}`);
-            if (inputElem) {
-                let val = parseFloat(inputElem.value) || 0;
-                if (val > 0) {
-                    item.stock = parseFloat((item.stock - val).toFixed(2)); 
-                    if (item.stock < 0) item.stock = 0;
-                    item.total7Days = parseFloat((item.total7Days + val).toFixed(2)); 
-                    item.usedToday = val; // บันทึกยอดใช้ของวันนี้ไว้
-                }
+            let buyElem = document.getElementById(`buy_${index}`);
+            let usedElem = document.getElementById(`used_${index}`);
+            
+            let bVal = buyElem ? (parseFloat(buyElem.value) || 0) : 0;
+            let uVal = usedElem ? (parseFloat(usedElem.value) || 0) : 0;
+
+            item.buyQty = bVal;
+            item.usedToday = uVal;
+
+            item.stock = parseFloat((item.stock + bVal - uVal).toFixed(2));
+            if (item.stock < 0) item.stock = 0;
+
+            if (uVal > 0) {
+                item.total7Days = parseFloat((item.total7Days + uVal).toFixed(2)); 
             }
         });
 
-        // บันทึกลง Log ประจำวัน
         if(!dailyLogs) dailyLogs = {};
         dailyLogs[dateStr] = {
             date: dateStr,
@@ -443,12 +558,13 @@
         };
 
         syncToCloud();
-        alert(`✅ บันทึกตัดสต็อกประจำวันที่ ${dateStr} เรียบร้อยแล้ว!`);
+        alert(`✅ บันทึกตัดสต็อก & รับของประจำวันที่ ${dateStr} เรียบร้อยแล้ว!`);
     }
 
     function resetDefaultData() {
         if (confirm("⚠️ คุณต้องการรีเซ็ตข้อมูลทั้งหมดในระบบคลาวด์กลับเป็นค่าเริ่มต้นใช่หรือไม่?")) {
             categories = defaultCategories;
+            partners = defaultPartners;
             inventory = defaultInventory;
             dailyLogs = {};
             syncToCloud();
@@ -458,12 +574,12 @@
 
     function exportToExcel() {
         let dateStr = document.getElementById("recordDate").value;
-        let csv = '\uFEFFรหัสสินค้า,ชื่อรายการ,หมวดหมู่,แหล่งซื้อ (Supplier),หน่วย,คงเหลือปัจจุบัน,เบิกใช้ในวัน,ยอดใช้รวม (7 วัน),เฉลี่ยต่อวัน,หมายเหตุ,สถานะ\n';
+        let csv = '\uFEFFรหัสสินค้า,ชื่อรายการ,หมวดหมู่,แหล่งซื้อ,วันสั่งซื้อ,หน่วย,คงเหลือปัจจุบัน,รับเข้า (ซื้อเพิ่ม),เบิกใช้ในวัน,ยอดใช้รวม (7 วัน),เฉลี่ยต่อวัน,หมายเหตุ,สถานะ\n';
         
         inventory.forEach(item => {
             let avgDaily = (item.total7Days / 7).toFixed(1);
             let statusText = item.stock <= 3 ? 'สั่งเพิ่มด่วน' : 'ปกติ';
-            csv += `"${item.code || ''}","${item.name}","${item.category || 'อื่นๆ'}","${item.supplier || 'โกดังของเราเอง'}","${item.unit}",${item.stock},${item.usedToday || 0},${item.total7Days},${avgDaily},"${item.note || ''}","${statusText}"\n`;
+            csv += `"${item.code || ''}","${item.name}","${item.category || 'อื่นๆ'}","${item.supplier || partners[0]}","${item.orderDay || 'ทุกวัน'}","${item.unit}",${item.stock},${item.buyQty || 0},${item.usedToday || 0},${item.total7Days},${avgDaily},"${item.note || ''}","${statusText}"\n`;
         });
 
         let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
