@@ -566,7 +566,11 @@
             itemsInCat.forEach((item) => {
                 let index = inventory.indexOf(item);
                 let statusHTML = item.stock <= 3 ? '<span class="badge-alert">⚠️ สั่งเพิ่มด่วน</span>' : '<span class="badge-normal">ปกติ</span>';
-                let imgHTML = `<img src="${item.image || 'https://via.placeholder.com/100?text=No+Image'}" class="item-img" onclick="openImageModal('${item.name}', '${item.code || ''}', '${item.category}', '${item.supplier || partners[0]}', '${item.orderDay || 'ทุกวัน'}', '${item.unit}', ${item.stock}, ${item.total7Days}, '${item.note || ''}', '${item.image || ''}')">`;
+                
+                // คืนปุ่มเพิ่ม/เปลี่ยนรูปให้ครบถ้วน
+                let imgHTML = item.image 
+                    ? `<img src="${item.image}" class="item-img" onclick="openImageModal('${item.name}', '${item.code || ''}', '${item.category}', '${item.supplier || partners[0]}', '${item.orderDay || 'ทุกวัน'}', '${item.unit}', ${item.stock}, ${item.total7Days}, '${item.note || ''}', '${item.image || ''}')"><label class="btn btn-upload">📷 เปลี่ยน<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`
+                    : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><label class="btn btn-upload">📷 เพิ่มรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
 
                 let catOptions = allCats.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
                 let supOptions = partners.map(s => `<option value="${s}" ${s === (item.supplier || partners[0]) ? 'selected' : ''}>${s}</option>`).join('');
@@ -598,6 +602,17 @@
             inventory[index][field] = value;
         }
         syncToCloud();
+    }
+
+    function updateImage(index, input) {
+        if (input.files && input.files[0]) {
+            let reader = new FileReader();
+            reader.onload = function(e) {
+                inventory[index].image = e.target.result;
+                syncToCloud();
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
     }
 
     function updateBuyLocally(index, value) {
@@ -729,12 +744,10 @@
             let lines = text.split('\n');
             let count = 0;
 
-            // เริ่มอ่านจากบรรทัดที่ 1 (ข้ามหัวตาราง index 0)
             for (let i = 1; i < lines.length; i++) {
                 let line = lines[i].trim();
                 if (!line) continue;
 
-                // แยก CSV แบบรองรับเครื่องหมายคำพูด
                 let cols = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || line.split(',');
                 if (cols.length >= 6) {
                     let clean = cols.map(val => val ? val.replace(/^"|"$/g, '').trim() : '');
