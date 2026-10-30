@@ -23,7 +23,7 @@
         .date-display input { padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color); }
 
         /* Tab Navigation */
-        .tab-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; }
+        .tab-nav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 10px; flex-wrap: wrap; }
         .tab-btn { background: #e9ecef; border: none; padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer; color: #495057; font-size: 1rem; transition: all 0.2s; }
         .tab-btn.active { background: var(--secondary); color: white; }
 
@@ -103,7 +103,8 @@
 
     <!-- Tab Navigation -->
     <div class="tab-nav">
-        <button class="tab-btn active" onclick="switchTab('dashboardTab')">📊 แดชบอร์ด & เช็คสต็อก / สั่งซื้อ</button>
+        <button class="tab-btn active" onclick="switchTab('dashboardTab')">📊 แดชบอร์ด & เช็คสต็อก</button>
+        <button class="tab-btn" onclick="switchTab('orderTab')">🛒 หน้าแท็บสั่งซื้อสินค้า</button>
         <button class="tab-btn" onclick="switchTab('manageTab')">⚙️ จัดการข้อมูล & กรอกสต็อกประจำวัน</button>
     </div>
 
@@ -162,13 +163,63 @@
             </div>
 
             <div class="action-bar">
-                <button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>
                 <button class="btn btn-excel" onclick="exportToExcel()">📊 Export Excel (วันนี้)</button>
             </div>
         </div>
     </div>
 
-    <!-- ================= TAB 2: MANAGE & INPUT STOCK ================= -->
+    <!-- ================= TAB 2: ORDER PAGE ================= -->
+    <div id="orderTab" class="tab-content">
+        <div class="card">
+            <h3>🛒 หน้าแท็บจัดเตรียมรายการสั่งซื้อสินค้า</h3>
+            
+            <div class="filter-container">
+                <div class="filter-group">
+                    <label>🤝 เลือกพาร์ทเนอร์ที่ต้องการสั่งซื้อ:</label>
+                    <select id="orderPartnerSelect" onchange="renderOrderList()"></select>
+                </div>
+                <div class="filter-group">
+                    <label>📅 เลือกวันสั่งซื้อประจำสัปดาห์:</label>
+                    <select id="orderDaySelect" onchange="renderOrderList()">
+                        <option value="all">🗓️ ทั้งหมดทุกวัน</option>
+                        <option value="ทุกวัน">📅 สั่งทุกวัน</option>
+                        <option value="วันจันทร์">วันจันทร์</option>
+                        <option value="วันอังคาร">วันอังคาร</option>
+                        <option value="วันพุธ">วันพุธ</option>
+                        <option value="วันพฤหัสบดี">วันพฤหัสบดี</option>
+                        <option value="วันศุกร์">วันศุกร์</option>
+                        <option value="วันเสาร์">วันเสาร์</option>
+                        <option value="วันอาทิตย์">วันอาทิตย์</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>รูปภาพ</th>
+                            <th>รหัส</th>
+                            <th>ชื่อวัตถุดิบ</th>
+                            <th>หมวดหมู่</th>
+                            <th>หน่วย</th>
+                            <th>คงเหลือปัจจุบัน</th>
+                            <th>เฉลี่ยใช้/วัน</th>
+                            <th>สถานะ</th>
+                            <th>ระบุจำนวนที่จะสั่งซื้อ</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orderTableBody"></tbody>
+                </table>
+            </div>
+
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= TAB 3: MANAGE & INPUT STOCK ================= -->
     <div id="manageTab" class="tab-content">
         <!-- จัดการพาร์ทเนอร์และหมวดหมู่ -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
@@ -281,6 +332,7 @@
                             <th>คงเหลือปัจจุบัน</th>
                             <th>รับเข้า (ซื้อเพิ่ม)</th>
                             <th>เบิกใช้ (วันนี้)</th>
+                            <th>หมายเหตุ</th>
                             <th>สถานะ</th>
                             <th>จัดการ</th>
                         </tr>
@@ -339,6 +391,7 @@
                 if(item.buyQty === undefined) item.buyQty = 0;
                 if(!item.orderDay) item.orderDay = "ทุกวัน";
                 if(!item.supplier) item.supplier = partners[0];
+                if(item.note === undefined) item.note = "";
             });
         } else {
             categories = defaultCategories;
@@ -373,6 +426,8 @@
 
         if(tabId === 'dashboardTab') {
             renderDashboard();
+        } else if(tabId === 'orderTab') {
+            renderOrderList();
         } else if(tabId === 'manageTab') {
             renderManageTable();
         }
@@ -395,13 +450,13 @@
             supSelect.value = currentSup;
         }
 
-        ['dashSupplierFilter', 'manageSupplierFilter'].forEach(id => {
+        ['dashSupplierFilter', 'manageSupplierFilter', 'orderPartnerSelect'].forEach(id => {
             let el = document.getElementById(id);
             if(el) {
                 let cur = el.value;
-                el.innerHTML = '<option value="all">🌐 แสดงทุกแหล่งซื้อ</option>';
+                el.innerHTML = id === 'orderPartnerSelect' ? '' : '<option value="all">🌐 แสดงทุกแหล่งซื้อ</option>';
                 partners.forEach(sup => { el.innerHTML += `<option value="${sup}">${sup}</option>`; });
-                el.value = cur;
+                if(cur) el.value = cur;
             }
         });
 
@@ -506,13 +561,16 @@
                         if(item.buyQty === undefined) item.buyQty = 0;
                         if(!item.orderDay) item.orderDay = "ทุกวัน";
                         if(!item.supplier) item.supplier = partners[0];
+                        if(item.note === undefined) item.note = "";
                     });
                 }
                 renderDashboard();
+                renderOrderList();
                 renderManageTable();
             });
         }
         renderDashboard();
+        renderOrderList();
         renderManageTable();
     }
 
@@ -564,6 +622,72 @@
         });
     }
 
+    function renderOrderList() {
+        const tbody = document.getElementById("orderTableBody");
+        if(!tbody) return;
+        tbody.innerHTML = "";
+
+        let selectedPartner = document.getElementById("orderPartnerSelect").value;
+        let selectedDay = document.getElementById("orderDaySelect").value;
+
+        let filtered = inventory.filter(item => {
+            let matchSup = !selectedPartner || (item.supplier || partners[0]) === selectedPartner;
+            let matchDay = (selectedDay === 'all' || (item.orderDay || "ทุกวัน") === selectedDay);
+            return matchSup && matchDay;
+        });
+
+        if(filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" style="padding: 20px; color: #6c757d;">ไม่พบรายการสินค้าสำหรับพาร์ทเนอร์หรือวันที่เลือก</td></tr>`;
+            return;
+        }
+
+        filtered.forEach((item) => {
+            let index = inventory.indexOf(item);
+            let avgDaily = (item.total7Days / 7).toFixed(1);
+            let statusHTML = item.stock <= 3 ? '<span class="badge-alert">⚠️ สั่งเพิ่มด่วน</span>' : '<span class="badge-normal">ปกติ</span>';
+            let imgHTML = item.image ? `<img src="${item.image}" class="item-img" onclick="openImageModal('${item.name}', '${item.code || ''}', '${item.category}', '${item.supplier || partners[0]}', '${item.orderDay || 'ทุกวัน'}', '${item.unit}', ${item.stock}, ${item.total7Days}, '${item.note || ''}', '${item.image || ''}')">` : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span>`;
+
+            tbody.innerHTML += `<tr>
+                <td>${imgHTML}</td>
+                <td>${item.code || '-'}</td>
+                <td style="font-weight: bold; text-align: left;">${item.name}</td>
+                <td>${item.category || 'อื่นๆ'}</td>
+                <td>${item.unit}</td>
+                <td style="font-weight: bold; color: ${item.stock <= 3 ? '#e63946' : '#2a9d8f'};">${item.stock}</td>
+                <td>${avgDaily}</td>
+                <td>${statusHTML}</td>
+                <td><input type="number" step="any" id="order_qty_${index}" value="${item.buyQty || 0}" style="width: 80px; text-align: center; font-weight: bold; padding: 6px;" onchange="updateBuyLocallyFromOrder(${index}, this.value)"></td>
+            </tr>`;
+        });
+    }
+
+    function updateBuyLocallyFromOrder(index, value) {
+        inventory[index].buyQty = parseFloat(value) || 0;
+        syncToCloud();
+    }
+
+    function copyOrderText() {
+        let selectedPartner = document.getElementById("orderPartnerSelect").value;
+        let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
+
+        if(filtered.length === 0) {
+            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อ (ช่องจำนวนที่จะสั่งซื้อเป็น 0 ทั้งหมด)");
+            return;
+        }
+
+        let text = `🛒 รายการสั่งซื้อสินค้า: ${selectedPartner}\n📅 ประจำวันที่: ${document.getElementById('recordDate').value}\n----------------------------------\n`;
+        filtered.forEach((item, i) => {
+            text += `${i + 1}. ${item.name} (${item.code || '-'}) จำนวน: ${item.buyQty} ${item.unit}\n`;
+        });
+        text += `----------------------------------\n📌 ฝากดำเนินการจัดส่งด้วยครับ/ค่ะ`;
+
+        navigator.clipboard.writeText(text).then(() => {
+            alert("📋 คัดลอกรายการสั่งซื้อเรียบร้อยแล้ว สามารถนำไปวางส่งใน Line ได้ทันที!");
+        }).catch(err => {
+            alert("คัดลอกไม่สำเร็จ: " + err);
+        });
+    }
+
     function renderManageTable() {
         const tbody = document.getElementById("manageTableBody");
         if(!tbody) return;
@@ -587,7 +711,7 @@
             let itemsInCat = filtered.filter(item => (item.category || "อื่นๆ") === cat);
             if (itemsInCat.length === 0) return;
 
-            tbody.innerHTML += `<tr><td colspan="12" class="category-header">📁 หมวด: ${cat}</td></tr>`;
+            tbody.innerHTML += `<tr><td colspan="13" class="category-header">📁 หมวด: ${cat}</td></tr>`;
 
             itemsInCat.forEach((item) => {
                 let index = inventory.indexOf(item);
@@ -608,14 +732,15 @@
                 tbody.innerHTML += `<tr>
                     <td>${imgHTML}</td>
                     <td><input type="text" value="${item.code || ''}" style="width:50px; text-align:center; padding:4px;" onchange="updateField(${index}, 'code', this.value)"></td>
-                    <td><input type="text" value="${item.name}" style="width:110px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
-                    <td><select style="width:90px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
-                    <td><select style="width:110px; padding:4px;" onchange="updateField(${index}, 'supplier', this.value)">${supOptions}</select></td>
-                    <td><select style="width:95px; padding:4px;" onchange="updateField(${index}, 'orderDay', this.value)">${dayOptions}</select></td>
-                    <td><input type="text" value="${item.unit}" style="width:50px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
+                    <td><input type="text" value="${item.name}" style="width:100px; padding:4px;" onchange="updateField(${index}, 'name', this.value)"></td>
+                    <td><select style="width:85px; padding:4px;" onchange="updateField(${index}, 'category', this.value)">${catOptions}</select></td>
+                    <td><select style="width:100px; padding:4px;" onchange="updateField(${index}, 'supplier', this.value)">${supOptions}</select></td>
+                    <td><select style="width:90px; padding:4px;" onchange="updateField(${index}, 'orderDay', this.value)">${dayOptions}</select></td>
+                    <td><input type="text" value="${item.unit}" style="width:45px; text-align:center; padding:4px;" onchange="updateField(${index}, 'unit', this.value)"></td>
                     <td><input type="number" step="any" value="${item.stock}" class="editable-input" ${disabledAttr} onchange="updateField(${index}, 'stock', parseFloat(this.value)||0)"></td>
-                    <td><input type="number" step="any" id="buy_${index}" value="${item.buyQty || 0}" style="width:65px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateBuyLocally(${index}, this.value)"></td>
-                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday || 0}" style="width:65px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateUsedLocally(${index}, this.value)"></td>
+                    <td><input type="number" step="any" id="buy_${index}" value="${item.buyQty || 0}" style="width:60px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateBuyLocally(${index}, this.value)"></td>
+                    <td><input type="number" step="any" id="used_${index}" value="${item.usedToday || 0}" style="width:60px; text-align:center; padding:4px;" ${disabledAttr} onchange="updateUsedLocally(${index}, this.value)"></td>
+                    <td><input type="text" value="${item.note || ''}" style="width:90px; padding:4px;" onchange="updateField(${index}, 'note', this.value)"></td>
                     <td>${statusHTML}</td>
                     <td><button class="btn btn-danger" onclick="deleteItem(${index})">🗑️ ลบ</button></td>
                 </tr>`;
@@ -808,26 +933,6 @@
             input.value = '';
         };
         reader.readAsText(file, 'UTF-8');
-    }
-
-    function copyOrderText() {
-        let filtered = inventory.filter(item => (item.buyQty || 0) > 0);
-        if(filtered.length === 0) {
-            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อหรือรับเข้า (ช่องซื้อเพิ่มเป็น 0 ทั้งหมด)");
-            return;
-        }
-
-        let text = `🛒 รายการสั่งซื้อและรับเข้าสินค้า\n📅 ประจำวันที่: ${document.getElementById('recordDate').value}\n----------------------------------\n`;
-        filtered.forEach((item, i) => {
-            text += `${i + 1}. ${item.name} (${item.code || '-'}) สั่ง: ${item.buyQty} ${item.unit} [จาก: ${item.supplier || partners[0]}]\n`;
-        });
-        text += `----------------------------------\n📌 แจ้งยอดสั่งซื้อ/รับเข้าสต็อกร้านหม่าล่าทั่ง`;
-
-        navigator.clipboard.writeText(text).then(() => {
-            alert("📋 คัดลอกรายการเรียบร้อยแล้ว สามารถนำไปวางส่งใน Line ได้ทันที!");
-        }).catch(err => {
-            alert("คัดลอกไม่สำเร็จ: " + err);
-        });
     }
 
     function exportToExcel() {
