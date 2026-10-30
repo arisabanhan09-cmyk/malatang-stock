@@ -6,6 +6,9 @@
     <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max (Cloud)</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <!-- jsPDF สำหรับสร้างใบสั่งซื้อ PDF ของ Makro -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
         :root {
             --primary: #e63946;
@@ -44,6 +47,7 @@
         .btn-success { background-color: #2a9d8f; }
         .btn-danger { background-color: #e63946; padding: 6px 10px; font-size: 0.8rem; }
         .btn-excel { background-color: #f4a261; color: white; }
+        .btn-pdf { background-color: #e76f51; color: white; }
         .btn-reset { background-color: #6c757d; color: white; }
         .btn-upload { background-color: #457b9d; color: white; padding: 4px 8px; font-size: 0.75rem; margin-top: 4px; display: inline-block; cursor: pointer; border-radius: 4px; }
 
@@ -213,8 +217,8 @@
                 </table>
             </div>
 
-            <div class="action-bar">
-                <button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>
+            <div class="action-bar" id="orderActionBar">
+                <!-- ปุ่มจะเปลี่ยนตามพาร์ทเนอร์อัตโนมัติ (Line หรือ PDF) -->
             </div>
         </div>
     </div>
@@ -624,11 +628,19 @@
 
     function renderOrderList() {
         const tbody = document.getElementById("orderTableBody");
+        const actionContainer = document.getElementById("orderActionBar");
         if(!tbody) return;
         tbody.innerHTML = "";
 
         let selectedPartner = document.getElementById("orderPartnerSelect").value;
         let selectedDay = document.getElementById("orderDaySelect").value;
+
+        // เปลี่ยนปุ่มด้านล่างตามพาร์ทเนอร์ (Makro ใช้ PDF, ที่อื่นใช้คัดลอกไลน์)
+        if (selectedPartner === "Makro") {
+            actionContainer.innerHTML = `<button class="btn btn-pdf" onclick="generateMakroPDF()">📄 ดาวน์โหลดใบสั่งซื้อ PDF (Makro)</button>`;
+        } else {
+            actionContainer.innerHTML = `<button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>`;
+        }
 
         let filtered = inventory.filter(item => {
             let matchSup = !selectedPartner || (item.supplier || partners[0]) === selectedPartner;
@@ -686,6 +698,58 @@
         }).catch(err => {
             alert("คัดลอกไม่สำเร็จ: " + err);
         });
+    }
+
+    // ฟังก์ชันสร้าง PDF สำหรับ Makro
+    async function generateMakroPDF() {
+        let selectedPartner = document.getElementById("orderPartnerSelect").value;
+        let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
+
+        if(filtered.length === 0) {
+            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อสำหรับ Makro (ช่องจำนวนที่จะสั่งซื้อเป็น 0 ทั้งหมด)");
+            return;
+        }
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+
+        // โหลดฟอนต์ภาษาไทย (ใช้ฟอนต์มาตรฐานหรือ Unicode ในตัว jsPDF-autotable)
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("Makro Order Form", 105, 15, { align: "center" });
+
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Partner: ${selectedPartner}`, 14, 25);
+        doc.text(`Date: ${document.getElementById('recordDate').value}`, 14, 31);
+
+        let tableData = [];
+        for (let i = 0; i < filtered.length; i++) {
+            let item = filtered[i];
+            tableData.push([
+                i + 1,
+                item.name + (item.code ? `\n(${item.code})` : ''),
+                `${item.buyQty} ${item.unit}`,
+                item.note || '-'
+            ]);
+        }
+
+        doc.autoTable({
+            startY: 38,
+            head: [['No.', 'Product Name', 'Quantity', 'Note']],
+            body: tableData,
+            theme: 'grid',
+            headStyles: { fillColor: [69, 123, 157], halign: 'center' },
+            columnStyles: {
+                0: { halign: 'center', cellWidth: 15 },
+                1: { cellWidth: 80 },
+                2: { halign: 'center', cellWidth: 40 },
+                3: { cellWidth: 55 }
+            },
+            styles: { fontSize: 10, cellPadding: 6 }
+        });
+
+        doc.save(`Makro_Order_${document.getElementById('recordDate').value}.pdf`);
     }
 
     function renderManageTable() {
