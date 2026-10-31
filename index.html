@@ -44,6 +44,7 @@
         .btn-success { background-color: #2a9d8f; }
         .btn-danger { background-color: #e63946; padding: 6px 10px; font-size: 0.8rem; }
         .btn-excel { background-color: #f4a261; color: white; }
+        .btn-pdf { background-color: #e76f51; color: white; }
         .btn-reset { background-color: #6c757d; color: white; }
         .btn-upload { background-color: #457b9d; color: white; padding: 4px 8px; font-size: 0.75rem; margin-top: 4px; display: inline-block; cursor: pointer; border-radius: 4px; }
 
@@ -213,9 +214,7 @@
                 </table>
             </div>
 
-            <div class="action-bar">
-                <button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>
-            </div>
+            <div class="action-bar" id="orderActionBar"></div>
         </div>
     </div>
 
@@ -279,8 +278,8 @@
                 <input type="text" id="newNote" placeholder="หมายเหตุ">
                 
                 <div style="grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; background: #f8f9fa; padding: 8px; border-radius: 8px; border: 1px dashed #ced4da;">
-                    <label style="font-size: 0.85rem; font-weight: 600; color: #495057;">📸 รูปภาพสินค้า:</label>
-                    <input type="file" id="newImage" accept="image/*" capture="environment" style="font-size: 0.85rem; border: none; background: transparent;">
+                    <label style="font-size: 0.85rem; font-weight: 600; color: #495057;">📸 รูปภาพสินค้า (เลือกจากอัลบั้มหรือกล้อง):</label>
+                    <input type="file" id="newImage" accept="image/*" style="font-size: 0.85rem; border: none; background: transparent;">
                 </div>
 
                 <button class="btn btn-success" onclick="addItem()" style="grid-column: 1 / -1; padding: 12px;">➕ บันทึกเพิ่มสินค้าใหม่</button>
@@ -380,33 +379,76 @@
         { code: "M05", name: "ผักบุ้ง", category: "ผัก", supplier: "มหาชัย", orderDay: "วันพฤหัสบดี", unit: "กก.", stock: 5.5, buyQty: 0, usedToday: 0, total7Days: 14.5, note: "รับของสดทุกเช้า", image: "" }
     ];
 
-    db.ref('malatang_stock').on('value', (snapshot) => {
-        let data = snapshot.val();
-        if (data) {
-            categories = data.categories || defaultCategories;
-            partners = data.partners || defaultPartners;
-            inventory = data.inventory || defaultInventory;
-            dailyLogs = data.dailyLogs || {};
-            inventory.forEach(item => {
-                if(item.buyQty === undefined) item.buyQty = 0;
-                if(!item.orderDay) item.orderDay = "ทุกวัน";
-                if(!item.supplier) item.supplier = partners[0];
-                if(item.note === undefined) item.note = "";
-            });
-        } else {
-            categories = defaultCategories;
-            partners = defaultPartners;
-            inventory = defaultInventory;
-            dailyLogs = {};
-            syncToCloud();
+    // ฟังก์ชันบีบอัดรูปภาพอัตโนมัติ เพื่อไม่ให้ไฟล์ใหญ่เกินไปและแก้ปัญหาหน่วง
+    function compressImage(file, callback) {
+        if (!file) { callback(""); return; }
+        let reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(event) {
+            let img = new Image();
+            img.src = event.target.result;
+            img.onload = function() {
+                let canvas = document.createElement('canvas');
+                let MAX_WIDTH = 250;
+                let MAX_HEIGHT = 250;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                // บีบอัดเป็น JPEG คุณภาพ 0.7 (ไฟล์เล็ก ไม่หน่วง)
+                let dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                callback(dataUrl);
+            }
         }
-        updateDropdowns();
-        loadDataForSelectedDate();
-        document.getElementById('loadingOverlay').style.display = 'none';
-    }, (error) => {
-        alert("เกิดข้อผิดพลาด: " + error.message);
-        document.getElementById('loadingOverlay').style.display = 'none';
-    });
+    }
+
+    function loadData() {
+        db.ref('malatang_stock').once('value').then((snapshot) => {
+            let data = snapshot.val();
+            if (data) {
+                categories = data.categories || defaultCategories;
+                partners = data.partners || defaultPartners;
+                inventory = data.inventory || defaultInventory;
+                dailyLogs = data.dailyLogs || {};
+                inventory.forEach(item => {
+                    if(item.buyQty === undefined) item.buyQty = 0;
+                    if(!item.orderDay) item.orderDay = "ทุกวัน";
+                    if(!item.supplier) item.supplier = partners[0];
+                    if(item.note === undefined) item.note = "";
+                });
+            } else {
+                categories = defaultCategories;
+                partners = defaultPartners;
+                inventory = defaultInventory;
+                dailyLogs = {};
+                syncToCloud();
+            }
+            updateDropdowns();
+            loadDataForSelectedDate();
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }).catch((error) => {
+            alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: " + error.message);
+            document.getElementById('loadingOverlay').style.display = 'none';
+        });
+    }
+
+    loadData();
 
     function syncToCloud() {
         db.ref('malatang_stock').set({
@@ -498,6 +540,7 @@
         partners.push(pName);
         document.getElementById("newPartnerName").value = "";
         syncToCloud();
+        updateDropdowns();
         alert(`✅ เพิ่มพาร์ทเนอร์ "${pName}" สำเร็จ!`);
     }
 
@@ -507,6 +550,7 @@
         if (confirm(`คุณต้องการลบพาร์ทเนอร์ "${removed}" ใช่หรือไม่?`)) {
             partners.splice(index, 1);
             syncToCloud();
+            updateDropdowns();
         }
     }
 
@@ -517,6 +561,7 @@
         categories.push(catName);
         document.getElementById("newCategoryName").value = "";
         syncToCloud();
+        updateDropdowns();
         alert(`✅ เพิ่มหมวดหมู่ "${catName}" สำเร็จ!`);
     }
 
@@ -554,20 +599,6 @@
         } else {
             statusTag.style.display = "none";
             if(saveBtn) { saveBtn.disabled = false; saveBtn.style.opacity = "1"; }
-            db.ref('malatang_stock/inventory').once('value', (snap) => {
-                if(snap.val()) {
-                    inventory = snap.val();
-                    inventory.forEach(item => {
-                        if(item.buyQty === undefined) item.buyQty = 0;
-                        if(!item.orderDay) item.orderDay = "ทุกวัน";
-                        if(!item.supplier) item.supplier = partners[0];
-                        if(item.note === undefined) item.note = "";
-                    });
-                }
-                renderDashboard();
-                renderOrderList();
-                renderManageTable();
-            });
         }
         renderDashboard();
         renderOrderList();
@@ -624,11 +655,21 @@
 
     function renderOrderList() {
         const tbody = document.getElementById("orderTableBody");
+        const actionContainer = document.getElementById("orderActionBar");
         if(!tbody) return;
         tbody.innerHTML = "";
 
         let selectedPartner = document.getElementById("orderPartnerSelect").value;
         let selectedDay = document.getElementById("orderDaySelect").value;
+
+        if (selectedPartner === "Makro") {
+            actionContainer.innerHTML = `
+                <button class="btn btn-pdf" onclick="generateMakroPrintPDF()">📄 พิมพ์ / บันทึกใบสั่งซื้อ (PDF)</button>
+                <button class="btn btn-excel" onclick="generateMakroExcel()">📊 ดาวน์โหลดใบสั่งซื้อ (Excel)</button>
+            `;
+        } else {
+            actionContainer.innerHTML = `<button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>`;
+        }
 
         let filtered = inventory.filter(item => {
             let matchSup = !selectedPartner || (item.supplier || partners[0]) === selectedPartner;
@@ -688,6 +729,100 @@
         });
     }
 
+    function generateMakroPrintPDF() {
+        let selectedPartner = document.getElementById("orderPartnerSelect").value;
+        let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
+
+        if(filtered.length === 0) {
+            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อสำหรับ Makro (ช่องจำนวนที่จะสั่งซื้อเป็น 0 ทั้งหมด)");
+            return;
+        }
+
+        let printWindow = window.open('', '_blank');
+        let html = `
+            <html>
+            <head>
+                <title>ใบสั่งซื้อ Makro - Holoyo</title>
+                <style>
+                    body { font-family: 'Tahoma', 'Sarabun', sans-serif; text-align: center; padding: 20px; color: #000; }
+                    h2 { margin: 2px 0; font-size: 22px; }
+                    p { margin: 5px 0 15px 0; font-size: 14px; }
+                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+                    th, td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; font-size: 14px; }
+                    th { background-color: #f2f2f2; }
+                    .img-prod { width: 60px; height: 60px; object-fit: cover; }
+                    .text-left { text-align: left; padding-left: 15px; }
+                </style>
+            </head>
+            <body>
+                <h2>Holoyo</h2>
+                <p>ศูนย์อาหารโรงชาย KKU (0807482261)</p>
+                <p style="font-size: 12px; color: #555;">วันที่สั่งซื้อ: ${document.getElementById('recordDate').value}</p>
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">ลำดับ</th>
+                            <th style="width: 20%;">รูปภาพ</th>
+                            <th style="width: 35%;">สินค้า</th>
+                            <th style="width: 15%;">จำนวน</th>
+                            <th style="width: 20%;">หมายเหตุ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+
+        filtered.forEach((item, i) => {
+            let imgTag = item.image ? `<img src="${item.image}" class="img-prod">` : '-';
+            html += `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td>${imgTag}</td>
+                    <td class="text-left">${item.name}</td>
+                    <td><b>${item.buyQty} ${item.unit}</b></td>
+                    <td>${item.note || '-'}</td>
+                </tr>
+            `;
+        });
+
+        html += `
+                    </tbody>
+                </table>
+                <script>
+                    window.onload = function() { window.print(); }
+                <\/script>
+            </body>
+            </html>
+        `;
+        printWindow.document.write(html);
+        printWindow.document.close();
+    }
+
+    function generateMakroExcel() {
+        let selectedPartner = document.getElementById("orderPartnerSelect").value;
+        let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
+
+        if(filtered.length === 0) {
+            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อสำหรับ Makro (ช่องจำนวนที่จะสั่งซื้อเป็น 0 ทั้งหมด)");
+            return;
+        }
+
+        let csv = '\uFEFFHoloyo\n';
+        csv += 'ศูนย์อาหารโรงชาย KKU (0807482261)\n';
+        csv += 'ลำดับ,รูปภาพ,สินค้า,จำนวน,หมายเหตุ\n';
+
+        filtered.forEach((item, i) => {
+            let qtyStr = `${item.buyQty} ${item.unit}`;
+            csv += `${i + 1},"[ ไม่มีรูปใน Excel ]","${item.name}","${qtyStr}","${item.note || ''}"\n`;
+        });
+
+        let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = `Makro_Order_Form_${document.getElementById('recordDate').value}.csv`;
+        a.click();
+    }
+
     function renderManageTable() {
         const tbody = document.getElementById("manageTableBody");
         if(!tbody) return;
@@ -718,8 +853,8 @@
                 let statusHTML = item.stock <= 3 ? '<span class="badge-alert">⚠️ สั่งเพิ่มด่วน</span>' : '<span class="badge-normal">ปกติ</span>';
                 
                 let imgHTML = item.image 
-                    ? `<img src="${item.image}" class="item-img" onclick="openImageModal('${item.name}', '${item.code || ''}', '${item.category}', '${item.supplier || partners[0]}', '${item.orderDay || 'ทุกวัน'}', '${item.unit}', ${item.stock}, ${item.total7Days}, '${item.note || ''}', '${item.image || ''}')"><label class="btn btn-upload">📷 เปลี่ยน<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`
-                    : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><label class="btn btn-upload">📷 เพิ่มรูป<input type="file" accept="image/*" capture="environment" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
+                    ? `<img src="${item.image}" class="item-img" onclick="openImageModal('${item.name}', '${item.code || ''}', '${item.category}', '${item.supplier || partners[0]}', '${item.orderDay || 'ทุกวัน'}', '${item.unit}', ${item.stock}, ${item.total7Days}, '${item.note || ''}', '${item.image || ''}')"><label class="btn btn-upload">📷 เปลี่ยน<input type="file" accept="image/*" style="display:none;" onchange="updateImage(${index}, this)"></label>`
+                    : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><label class="btn btn-upload">📷 เพิ่มรูป<input type="file" accept="image/*" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
 
                 let catOptions = allCats.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('');
                 let supOptions = partners.map(s => `<option value="${s}" ${s === (item.supplier || partners[0]) ? 'selected' : ''}>${s}</option>`).join('');
@@ -759,12 +894,12 @@
 
     function updateImage(index, input) {
         if (input.files && input.files[0]) {
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                inventory[index].image = e.target.result;
+            compressImage(input.files[0], function(compressedBase64) {
+                inventory[index].image = compressedBase64;
                 syncToCloud();
-            }
-            reader.readAsDataURL(input.files[0]);
+                renderManageTable();
+                renderDashboard();
+            });
         }
     }
 
@@ -795,18 +930,18 @@
         let category = catSelect === "auto" ? detectCategory(name) : catSelect;
 
         if (imageInput.files && imageInput.files[0]) {
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                inventory.push({ code, name, category, supplier, orderDay, unit, stock, buyQty: 0, usedToday: 0, total7Days: stock, note, image: e.target.result });
+            compressImage(imageInput.files[0], function(compressedBase64) {
+                inventory.push({ code, name, category, supplier, orderDay, unit, stock, buyQty: 0, usedToday: 0, total7Days: stock, note, image: compressedBase64 });
                 syncToCloud();
                 resetForm();
+                loadDataForSelectedDate();
                 alert("✅ เพิ่มสินค้าสำเร็จ!");
-            }
-            reader.readAsDataURL(imageInput.files[0]);
+            });
         } else {
             inventory.push({ code, name, category, supplier, orderDay, unit, stock, buyQty: 0, usedToday: 0, total7Days: stock, note, image: "" });
             syncToCloud();
             resetForm();
+            loadDataForSelectedDate();
             alert("✅ เพิ่มสินค้าสำเร็จ!");
         }
     }
@@ -825,6 +960,7 @@
         if (confirm(`คุณต้องการลบ "${inventory[index].name}" ออกจากระบบใช่หรือไม่?`)) {
             inventory.splice(index, 1);
             syncToCloud();
+            loadDataForSelectedDate();
         }
     }
 
@@ -870,6 +1006,7 @@
             inventory = defaultInventory;
             dailyLogs = {};
             syncToCloud();
+            loadDataForSelectedDate();
             alert("🔄 รีเซ็ตข้อมูลเรียบร้อยแล้ว");
         }
     }
@@ -926,6 +1063,7 @@
 
             if (count > 0) {
                 syncToCloud();
+                loadDataForSelectedDate();
                 alert(`✅ นำเข้าสินค้าสำเร็จ ${count} รายการ!`);
             } else {
                 alert("❌ ไม่พบข้อมูลที่ถูกต้องในไฟล์ กรุณาใช้ฟอร์ม Excel ที่กำหนด");
