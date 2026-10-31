@@ -6,7 +6,7 @@
     <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max (Cloud)</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <!-- jsPDF สำหรับสร้างใบสั่งซื้อ PDF ของ Makro -->
+    <!-- jsPDF และ autotable สำหรับสร้าง PDF ใบสั่งซื้อ -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
     <style>
@@ -218,7 +218,7 @@
             </div>
 
             <div class="action-bar" id="orderActionBar">
-                <!-- ปุ่มจะเปลี่ยนตามพาร์ทเนอร์อัตโนมัติ (Line หรือ PDF) -->
+                <!-- ปุ่มจะเปลี่ยนตามพาร์ทเนอร์อัตโนมัติ (Line หรือ PDF/Excel สำหรับ Makro) -->
             </div>
         </div>
     </div>
@@ -635,9 +635,12 @@
         let selectedPartner = document.getElementById("orderPartnerSelect").value;
         let selectedDay = document.getElementById("orderDaySelect").value;
 
-        // เปลี่ยนปุ่มด้านล่างตามพาร์ทเนอร์ (Makro ใช้ PDF, ที่อื่นใช้คัดลอกไลน์)
+        // หากเลือกเป็น Makro แสดงปุ่มดาวน์โหลดทั้ง PDF และ Excel แบบฟอร์มตามภาพ
         if (selectedPartner === "Makro") {
-            actionContainer.innerHTML = `<button class="btn btn-pdf" onclick="generateMakroPDF()">📄 ดาวน์โหลดใบสั่งซื้อ PDF (Makro)</button>`;
+            actionContainer.innerHTML = `
+                <button class="btn btn-pdf" onclick="generateMakroPDF()">📄 ดาวน์โหลดใบสั่งซื้อ (PDF)</button>
+                <button class="btn btn-excel" onclick="generateMakroExcel()">📊 ดาวน์โหลดใบสั่งซื้อ (Excel)</button>
+            `;
         } else {
             actionContainer.innerHTML = `<button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>`;
         }
@@ -700,7 +703,27 @@
         });
     }
 
-    // ฟังก์ชันสร้าง PDF สำหรับ Makro
+    // ฟังก์ชันช่วยแปลงรูป Base64 เป็น Image Element สำหรับใส่ใน jsPDF
+    function getBase64Image(imgUrl) {
+        return new Promise((resolve, reject) => {
+            if (!imgUrl) { resolve(null); return; }
+            let img = new Image();
+            img.crossOrigin = 'Anonymous';
+            img.onload = function() {
+                let canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                let ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                let dataURL = canvas.toDataURL('image/jpeg');
+                resolve(dataURL);
+            };
+            img.onerror = function() { resolve(null); };
+            img.src = imgUrl;
+        });
+    }
+
+    // ฟังก์ชันสร้าง PDF ใบสั่งซื้อ Makro ตามรูปแบบในภาพ
     async function generateMakroPDF() {
         let selectedPartner = document.getElementById("orderPartnerSelect").value;
         let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
@@ -713,43 +736,92 @@
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
 
-        // โหลดฟอนต์ภาษาไทย (ใช้ฟอนต์มาตรฐานหรือ Unicode ในตัว jsPDF-autotable)
+        // หัวข้อเอกสารตามตัวอย่าง
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.text("Makro Order Form", 105, 15, { align: "center" });
+        doc.setFontSize(14);
+        doc.text("Holoyo", 105, 12, { align: "center" });
 
         doc.setFontSize(11);
-        doc.setFont("helvetica", "normal");
-        doc.text(`Partner: ${selectedPartner}`, 14, 25);
-        doc.text(`Date: ${document.getElementById('recordDate').value}`, 14, 31);
+        doc.text("ศูนย์อาหารโรงชาย KKU (0807482261)", 105, 19, { align: "center" });
 
-        let tableData = [];
+        let tableRows = [];
         for (let i = 0; i < filtered.length; i++) {
             let item = filtered[i];
-            tableData.push([
-                i + 1,
-                item.name + (item.code ? `\n(${item.code})` : ''),
-                `${item.buyQty} ${item.unit}`,
-                item.note || '-'
-            ]);
+            let base64Img = await getBase64Image(item.image);
+            tableRows.push({
+                row: [
+                    i + 1,
+                    base64Img ? '' : '[ ไม่มีรูป ]',
+                    item.name,
+                    `${item.buyQty} ${item.unit}`,
+                    item.note || ''
+                ],
+                img: base64Img
+            });
         }
 
+        let bodyData = tableRows.map(item => item.row);
+
         doc.autoTable({
-            startY: 38,
-            head: [['No.', 'Product Name', 'Quantity', 'Note']],
-            body: tableData,
+            startY: 25,
+            head: [['ลำดับ', 'รูปภาพ', 'สินค้า', 'จำนวน', 'หมายเหตุ']],
+            body: bodyData,
             theme: 'grid',
-            headStyles: { fillColor: [69, 123, 157], halign: 'center' },
+            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center' },
             columnStyles: {
                 0: { halign: 'center', cellWidth: 15 },
-                1: { cellWidth: 80 },
-                2: { halign: 'center', cellWidth: 40 },
-                3: { cellWidth: 55 }
+                1: { halign: 'center', cellWidth: 30 },
+                2: { cellWidth: 75 },
+                3: { halign: 'center', cellWidth: 30 },
+                4: { cellWidth: 40 }
             },
-            styles: { fontSize: 10, cellPadding: 6 }
+            styles: { fontSize: 10, cellPadding: 8, valign: 'middle' },
+            didDrawCell: function(data) {
+                // วาดรูปภาพลงในคอลัมน์ที่ 1 (รูปภาพ)
+                if (data.section === 'body' && data.column.index === 1) {
+                    let rowIndex = data.row.index;
+                    let imgData = tableRows[rowIndex].img;
+                    if (imgData) {
+                        let dim = data.cell;
+                        let imgSize = 14; // ขนาดรูปในตาราง PDF
+                        let x = dim.x + (dim.width - imgSize) / 2;
+                        let y = dim.y + (dim.height - imgSize) / 2;
+                        try {
+                            doc.addImage(imgData, 'JPEG', x, y, imgSize, imgSize);
+                        } catch(e) {}
+                    }
+                }
+            }
         });
 
-        doc.save(`Makro_Order_${document.getElementById('recordDate').value}.pdf`);
+        doc.save(`Makro_Order_Form_${document.getElementById('recordDate').value}.pdf`);
+    }
+
+    // ฟังก์ชันสร้าง Excel ใบสั่งซื้อ Makro ตามรูปแบบในภาพ
+    function generateMakroExcel() {
+        let selectedPartner = document.getElementById("orderPartnerSelect").value;
+        let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
+
+        if(filtered.length === 0) {
+            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อสำหรับ Makro (ช่องจำนวนที่จะสั่งซื้อเป็น 0 ทั้งหมด)");
+            return;
+        }
+
+        let csv = '\uFEFFHoloyo\n';
+        csv += 'ศูนย์อาหารโรงชาย KKU (0807482261)\n';
+        csv += 'ลำดับ,สินค้า,จำนวน,หมายเหตุ\n';
+
+        filtered.forEach((item, i) => {
+            let qtyStr = `${item.buyQty} ${item.unit}`;
+            csv += `${i + 1},"${item.name}","${qtyStr}","${item.note || ''}"\n`;
+        });
+
+        let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        let url = URL.createObjectURL(blob);
+        let a = document.createElement('a');
+        a.href = url;
+        a.download = `Makro_Order_Form_${document.getElementById('recordDate').value}.csv`;
+        a.click();
     }
 
     function renderManageTable() {
