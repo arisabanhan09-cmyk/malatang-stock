@@ -44,7 +44,6 @@
         .btn-success { background-color: #2a9d8f; }
         .btn-danger { background-color: #e63946; padding: 6px 10px; font-size: 0.8rem; }
         .btn-excel { background-color: #f4a261; color: white; }
-        .btn-pdf { background-color: #e76f51; color: white; }
         .btn-reset { background-color: #6c757d; color: white; }
         .btn-upload { background-color: #457b9d; color: white; padding: 4px 8px; font-size: 0.75rem; margin-top: 4px; display: inline-block; cursor: pointer; border-radius: 4px; }
 
@@ -214,8 +213,8 @@
                 </table>
             </div>
 
-            <div class="action-bar" id="orderActionBar">
-                <!-- ปุ่มจะเปลี่ยนตามพาร์ทเนอร์อัตโนมัติ (Line หรือ PDF/Excel สำหรับ Makro) -->
+            <div class="action-bar">
+                <button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>
             </div>
         </div>
     </div>
@@ -361,7 +360,6 @@
         messagingSenderId: "767469911960",
         appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed",
     };
-
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
@@ -626,22 +624,11 @@
 
     function renderOrderList() {
         const tbody = document.getElementById("orderTableBody");
-        const actionContainer = document.getElementById("orderActionBar");
         if(!tbody) return;
         tbody.innerHTML = "";
 
         let selectedPartner = document.getElementById("orderPartnerSelect").value;
         let selectedDay = document.getElementById("orderDaySelect").value;
-
-        // หากเลือกเป็น Makro แสดงปุ่มพิมพ์ PDF (ภาษาไทยชัดเจน) และดาวน์โหลด Excel แบบ 5 คอลัมน์
-        if (selectedPartner === "Makro") {
-            actionContainer.innerHTML = `
-                <button class="btn btn-pdf" onclick="generateMakroPrintPDF()">📄 พิมพ์ / บันทึกใบสั่งซื้อ (PDF)</button>
-                <button class="btn btn-excel" onclick="generateMakroExcel()">📊 ดาวน์โหลดใบสั่งซื้อ (Excel)</button>
-            `;
-        } else {
-            actionContainer.innerHTML = `<button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อส่งพาร์ทเนอร์</button>`;
-        }
 
         let filtered = inventory.filter(item => {
             let matchSup = !selectedPartner || (item.supplier || partners[0]) === selectedPartner;
@@ -699,102 +686,6 @@
         }).catch(err => {
             alert("คัดลอกไม่สำเร็จ: " + err);
         });
-    }
-
-    // ฟังก์ชันพิมพ์ / บันทึก PDF (รองรับภาษาไทย 100%)
-    function generateMakroPrintPDF() {
-        let selectedPartner = document.getElementById("orderPartnerSelect").value;
-        let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
-
-        if(filtered.length === 0) {
-            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อสำหรับ Makro (ช่องจำนวนที่จะสั่งซื้อเป็น 0 ทั้งหมด)");
-            return;
-        }
-
-        let printWindow = window.open('', '_blank');
-        let html = `
-            <html>
-            <head>
-                <title>ใบสั่งซื้อ Makro - Holoyo</title>
-                <style>
-                    body { font-family: 'Tahoma', 'Sarabun', sans-serif; text-align: center; padding: 20px; color: #000; }
-                    h2 { margin: 2px 0; font-size: 22px; }
-                    p { margin: 5px 0 15px 0; font-size: 14px; }
-                    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-                    th, td { border: 1px solid #000; padding: 10px; text-align: center; vertical-align: middle; font-size: 14px; }
-                    th { background-color: #f2f2f2; }
-                    .img-prod { width: 60px; height: 60px; object-fit: cover; }
-                    .text-left { text-align: left; padding-left: 15px; }
-                </style>
-            </head>
-            <body>
-                <h2>Holoyo</h2>
-                <p>ศูนย์อาหารโรงชาย KKU (0807482261)</p>
-                <p style="font-size: 12px; color: #555;">วันที่สั่งซื้อ: ${document.getElementById('recordDate').value}</p>
-                <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 10%;">ลำดับ</th>
-                            <th style="width: 20%;">รูปภาพ</th>
-                            <th style="width: 35%;">สินค้า</th>
-                            <th style="width: 15%;">จำนวน</th>
-                            <th style="width: 20%;">หมายเหตุ</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
-
-        filtered.forEach((item, i) => {
-            let imgTag = item.image ? `<img src="${item.image}" class="img-prod">` : '-';
-            html += `
-                <tr>
-                    <td>${i + 1}</td>
-                    <td>${imgTag}</td>
-                    <td class="text-left">${item.name}</td>
-                    <td><b>${item.buyQty} ${item.unit}</b></td>
-                    <td>${item.note || '-'}</td>
-                </tr>
-            `;
-        });
-
-        html += `
-                    </tbody>
-                </table>
-                <script>
-                    window.onload = function() { window.print(); }
-                <\/script>
-            </body>
-            </html>
-        `;
-        printWindow.document.write(html);
-        printWindow.document.close();
-    }
-
-    // ฟังก์ชันดาวน์โหลด Excel (5 คอลัมน์ ตรงตามภาพ)
-    function generateMakroExcel() {
-        let selectedPartner = document.getElementById("orderPartnerSelect").value;
-        let filtered = inventory.filter(item => (item.supplier || partners[0]) === selectedPartner && (item.buyQty || 0) > 0);
-
-        if(filtered.length === 0) {
-            alert("ยังไม่ได้ระบุจำนวนสั่งซื้อสำหรับ Makro (ช่องจำนวนที่จะสั่งซื้อเป็น 0 ทั้งหมด)");
-            return;
-        }
-
-        let csv = '\uFEFFHoloyo\n';
-        csv += 'ศูนย์อาหารโรงชาย KKU (0807482261)\n';
-        csv += 'ลำดับ,รูปภาพ,สินค้า,จำนวน,หมายเหตุ\n';
-
-        filtered.forEach((item, i) => {
-            let qtyStr = `${item.buyQty} ${item.unit}`;
-            csv += `${i + 1},"[ ไม่มีรูปใน Excel ]","${item.name}","${qtyStr}","${item.note || ''}"\n`;
-        });
-
-        let blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        let url = URL.createObjectURL(blob);
-        let a = document.createElement('a');
-        a.href = url;
-        a.download = `Makro_Order_Form_${document.getElementById('recordDate').value}.csv`;
-        a.click();
     }
 
     function renderManageTable() {
