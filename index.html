@@ -351,7 +351,7 @@
 
         <!-- ตารางจัดการข้อมูลสินค้าทั้งหมด (แก้ไข/ลบ) -->
         <div class="card">
-            <h3>⚙️ จัดการรายการสินค้าทั้งหมดในระบบ</h3>
+            <h3>⚙️ จัดการรายการสินค้าทั้งหมดในระบบ (สามารถแก้ไขสต็อกตั้งต้น & คงเหลือปัจจุบันได้)</h3>
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -363,6 +363,8 @@
                             <th>แหล่งซื้อ</th>
                             <th>วันสั่งซื้อ</th>
                             <th>หน่วย</th>
+                            <th>สต็อกตั้งต้น</th>
+                            <th>คงเหลือปัจจุบัน</th>
                             <th>หมายเหตุ</th>
                             <th>จัดการ</th>
                         </tr>
@@ -458,6 +460,7 @@
                 inventory.forEach(item => {
                     if(item.buyQty === undefined) item.buyQty = 0;
                     if(item.usedToday === undefined) item.usedToday = 0;
+                    if(item.total7Days === undefined) item.total7Days = item.stock || 0;
                     if(!item.orderDay) item.orderDay = "ทุกวัน";
                     if(!item.supplier) item.supplier = partners[0];
                     if(item.note === undefined) item.note = "";
@@ -898,6 +901,7 @@
         alert(`🔄 เคลียร์ยอดของ "${inventory[index].name}" เรียบร้อยแล้ว`);
     }
 
+    // ตารางจัดการข้อมูลสินค้าทั้งหมด (เพิ่มช่องแก้สต็อกตั้งต้น และ คงเหลือปัจจุบัน)
     function renderManageTable() {
         const tbody = document.getElementById("manageTableBody");
         if(!tbody) return;
@@ -916,12 +920,14 @@
             tbody.innerHTML += `<tr>
                 <td>${imgHTML}</td>
                 <td><input type="text" value="${item.code || ''}" style="width:50px; text-align:center; padding:4px;" onchange="updateItemField(${index}, 'code', this.value)"></td>
-                <td><input type="text" value="${item.name}" style="width:110px; padding:4px;" onchange="updateItemField(${index}, 'name', this.value)"></td>
-                <td><select style="width:90px; padding:4px;" onchange="updateItemField(${index}, 'category', this.value)">${catOptions}</select></td>
+                <td><input type="text" value="${item.name}" style="width:100px; padding:4px;" onchange="updateItemField(${index}, 'name', this.value)"></td>
+                <td><select style="width:85px; padding:4px;" onchange="updateItemField(${index}, 'category', this.value)">${catOptions}</select></td>
                 <td><select style="width:100px; padding:4px;" onchange="updateItemField(${index}, 'supplier', this.value)">${supOptions}</select></td>
                 <td><select style="width:90px; padding:4px;" onchange="updateItemField(${index}, 'orderDay', this.value)">${dayOptions}</select></td>
-                <td><input type="text" value="${item.unit}" style="width:50px; text-align:center; padding:4px;" onchange="updateItemField(${index}, 'unit', this.value)"></td>
-                <td><input type="text" value="${item.note || ''}" style="width:100px; padding:4px;" onchange="updateItemField(${index}, 'note', this.value)"></td>
+                <td><input type="text" value="${item.unit}" style="width:45px; text-align:center; padding:4px;" onchange="updateItemField(${index}, 'unit', this.value)"></td>
+                <td><input type="number" step="any" value="${item.total7Days || item.stock}" style="width:65px; text-align:center; padding:4px; font-weight:bold; background:#e8f4f8;" onchange="updateItemField(${index}, 'total7Days', parseFloat(this.value)||0)"></td>
+                <td><input type="number" step="any" value="${item.stock}" style="width:65px; text-align:center; padding:4px; font-weight:bold; background:#fff3cd;" onchange="updateItemField(${index}, 'stock', parseFloat(this.value)||0)"></td>
+                <td><input type="text" value="${item.note || ''}" style="width:90px; padding:4px;" onchange="updateItemField(${index}, 'note', this.value)"></td>
                 <td><button class="btn btn-danger" onclick="deleteItem(${index})">🗑️ ลบ</button></td>
             </tr>`;
         });
