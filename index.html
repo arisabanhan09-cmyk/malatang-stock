@@ -348,7 +348,7 @@
             </div>
         </div>
 
-        <!-- ตารางจัดการข้อมูลสินค้าทั้งหมด (ค้นหา, กรองหมวด, กรองแหล่งซื้อ) -->
+        <!-- ตารางจัดการข้อมูลสินค้าทั้งหมด (พร้อมช่องค้นหา, กรองหมวด, กรองแหล่งซื้อ) -->
         <div class="card">
             <h3>⚙️ จัดการรายการสินค้าทั้งหมดในระบบ</h3>
             
@@ -533,7 +533,7 @@
             supSelect.value = currentSup;
         }
 
-        ['dashSupplierFilter', 'dailySupplierFilter', 'manageSupplierFilter', 'orderPartnerSelect'].forEach(id => {
+        ['dashSupplierFilter', 'dailySupplierFilter', 'orderPartnerSelect'].forEach(id => {
             let el = document.getElementById(id);
             if(el) {
                 let cur = el.value;
@@ -543,6 +543,16 @@
             }
         });
 
+        // อัปเดตตัวกรองแหล่งซื้อในหน้าจัดการข้อมูล
+        let manageSupFilter = document.getElementById("manageSupplierFilter");
+        if(manageSupFilter) {
+            let curSup = manageSupFilter.value;
+            manageSupFilter.innerHTML = '<option value="all">🌐 แสดงทุกแหล่งซื้อ</option>';
+            partners.forEach(sup => { manageSupFilter.innerHTML += `<option value="${sup}">${sup}</option>`; });
+            if(curSup) manageSupFilter.value = curSup;
+        }
+
+        // อัปเดตตัวกรองหมวดหมู่ในหน้าจัดการข้อมูล
         let manageCatFilter = document.getElementById("manageCategoryFilter");
         if(manageCatFilter) {
             let curCat = manageCatFilter.value;
