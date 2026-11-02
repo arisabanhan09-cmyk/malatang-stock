@@ -57,7 +57,6 @@
         
         .item-img { width: 45px; height: 45px; object-fit: cover; border-radius: 6px; border: 1px solid var(--border-color); display: block; margin: 0 auto; cursor: pointer; transition: transform 0.2s; }
         .item-img:hover { transform: scale(1.1); }
-        .editable-input { width: 75px; text-align: center; padding: 6px; font-weight: bold; background: #fdf0ed; border: 1px solid #f5c6cb; border-radius: 6px; }
         
         .badge-alert { background: #ffe3e3; color: #c92a3b; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; display: inline-block; }
         .badge-normal { background: #e6fcf5; color: #0ca678; padding: 4px 8px; border-radius: 6px; font-weight: bold; font-size: 0.75rem; display: inline-block; }
@@ -103,7 +102,7 @@
         <span id="historyStatus" style="color: #e63946; font-weight: bold; display: none;">📂 กำลังดูข้อมูลย้อนหลัง</span>
     </div>
 
-    <!-- Tab Navigation แยกเป็นสัดส่วน -->
+    <!-- Tab Navigation -->
     <div class="tab-nav">
         <button class="tab-btn active" onclick="switchTab('dashboardTab')">📊 แดชบอร์ด & เช็คสต็อก</button>
         <button class="tab-btn" onclick="switchTab('orderTab')">🛒 แท็บสั่งซื้อสินค้า</button>
@@ -349,9 +348,29 @@
             </div>
         </div>
 
-        <!-- ตารางจัดการข้อมูลสินค้าทั้งหมด (แก้ไข/ลบ) -->
+        <!-- ตารางจัดการข้อมูลสินค้าทั้งหมด (ค้นหา, กรองหมวด, กรองแหล่งซื้อ) -->
         <div class="card">
-            <h3>⚙️ จัดการรายการสินค้าทั้งหมดในระบบ (สามารถแก้ไขสต็อกตั้งต้น & คงเหลือปัจจุบันได้)</h3>
+            <h3>⚙️ จัดการรายการสินค้าทั้งหมดในระบบ</h3>
+            
+            <div class="filter-container">
+                <div class="filter-group">
+                    <label>🔍 ค้นหา (รหัส หรือ ชื่อสินค้า):</label>
+                    <input type="text" id="manageSearchInput" placeholder="พิมพ์ค้นหาที่นี่..." oninput="debounceSearch('manage')">
+                </div>
+                <div class="filter-group">
+                    <label>📁 กรองตามหมวดหมู่:</label>
+                    <select id="manageCategoryFilter" onchange="renderManageTable()">
+                        <option value="all">🌐 แสดงทุกหมวดหมู่</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>🤝 กรองตามแหล่งซื้อ (Supplier):</label>
+                    <select id="manageSupplierFilter" onchange="renderManageTable()">
+                        <option value="all">🌐 แสดงทุกแหล่งซื้อ</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table>
                     <thead>
@@ -416,6 +435,7 @@
         searchTimeout = setTimeout(() => {
             if (type === 'dash') renderDashboard();
             if (type === 'daily') renderDailyStockTable();
+            if (type === 'manage') renderManageTable();
         }, 150);
     }
 
@@ -513,7 +533,7 @@
             supSelect.value = currentSup;
         }
 
-        ['dashSupplierFilter', 'dailySupplierFilter', 'orderPartnerSelect'].forEach(id => {
+        ['dashSupplierFilter', 'dailySupplierFilter', 'manageSupplierFilter', 'orderPartnerSelect'].forEach(id => {
             let el = document.getElementById(id);
             if(el) {
                 let cur = el.value;
@@ -522,6 +542,14 @@
                 if(cur) el.value = cur;
             }
         });
+
+        let manageCatFilter = document.getElementById("manageCategoryFilter");
+        if(manageCatFilter) {
+            let curCat = manageCatFilter.value;
+            manageCatFilter.innerHTML = '<option value="all">🌐 แสดงทุกหมวดหมู่</option>';
+            categories.forEach(cat => { manageCatFilter.innerHTML += `<option value="${cat}">${cat}</option>`; });
+            if(curCat) manageCatFilter.value = curCat;
+        }
 
         let pContainer = document.getElementById("partnerListContainer");
         if(pContainer) {
@@ -901,13 +929,30 @@
         alert(`🔄 เคลียร์ยอดของ "${inventory[index].name}" เรียบร้อยแล้ว`);
     }
 
-    // ตารางจัดการข้อมูลสินค้าทั้งหมด (เพิ่มช่องแก้สต็อกตั้งต้น และ คงเหลือปัจจุบัน)
+    // หน้าจัดการข้อมูลสินค้า พร้อมช่องค้นหา & กรองหมวดหมู่ & กรองแหล่งซื้อ
     function renderManageTable() {
         const tbody = document.getElementById("manageTableBody");
         if(!tbody) return;
         tbody.innerHTML = "";
 
-        inventory.forEach((item, index) => {
+        let keyword = document.getElementById("manageSearchInput").value.toLowerCase().trim();
+        let catFilter = document.getElementById("manageCategoryFilter").value;
+        let supFilter = document.getElementById("manageSupplierFilter").value;
+
+        let filtered = inventory.filter(item => {
+            let matchSearch = !keyword || (item.name && item.name.toLowerCase().includes(keyword)) || (item.code && item.code.toLowerCase().includes(keyword));
+            let matchCat = catFilter === 'all' || (item.category || "อื่นๆ") === catFilter;
+            let matchSup = supFilter === 'all' || (item.supplier || partners[0]) === supFilter;
+            return matchSearch && matchCat && matchSup;
+        });
+
+        if(filtered.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="11" style="padding: 20px; color: #6c757d;">ไม่พบรายการสินค้าที่ค้นหา</td></tr>`;
+            return;
+        }
+
+        filtered.forEach((item) => {
+            let index = inventory.indexOf(item);
             let imgHTML = item.image 
                 ? `<img src="${item.image}" class="item-img" loading="lazy"><label class="btn btn-upload">📷 เปลี่ยน<input type="file" accept="image/*" style="display:none;" onchange="updateImage(${index}, this)"></label>`
                 : `<span style="color:#adb5bd; font-size:0.75rem;">ไม่มีรูป</span><label class="btn btn-upload">📷 เพิ่ม<input type="file" accept="image/*" style="display:none;" onchange="updateImage(${index}, this)"></label>`;
