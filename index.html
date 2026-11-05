@@ -5,212 +5,216 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max</title>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-storage.js"></script>
-
 <style>
-:root{--primary:#e63946;--secondary:#457b9d;--success:#2a9d8f;--bg:#f8f9fa;--border:#dee2e6;--text:#212529}
+:root{--red:#e63946;--blue:#457b9d;--green:#2a9d8f;--bg:#f8f9fa;--line:#dee2e6;--text:#212529}
 *{box-sizing:border-box}
-body{margin:0;padding:10px;font-family:"Segoe UI",Tahoma,sans-serif;color:var(--text);background:var(--bg)}
-.container{max-width:1400px;margin:auto;padding:15px;background:#fff;border-radius:15px;box-shadow:0 4px 20px #0000000d}
-.header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px;padding-bottom:12px;border-bottom:2px solid var(--border)}
-h1{margin:0;color:var(--primary);font-size:1.3rem}
-h3{margin:0 0 12px;padding-bottom:8px;color:var(--secondary);border-bottom:2px solid #f1f1f1;font-size:1.05rem}
+body{margin:0;padding:10px;background:var(--bg);color:var(--text);font-family:"Segoe UI",Tahoma,sans-serif}
+.container{max-width:1400px;margin:auto;padding:15px;background:#fff;border-radius:14px;box-shadow:0 4px 18px #0000000d}
+.header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-bottom:12px;margin-bottom:12px;border-bottom:2px solid var(--line)}
+h1{margin:0;color:var(--red);font-size:1.25rem}
+h3{margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #f1f1f1;color:var(--blue);font-size:1.05rem}
 input,select,button{font:inherit}
-input,select{width:100%;padding:9px;border:1px solid var(--border);border-radius:7px;background:#fff}
-input:focus,select:focus{outline:2px solid #457b9d33;border-color:var(--secondary)}
+input,select{width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;background:#fff}
+input:focus,select:focus{outline:2px solid #457b9d33;border-color:var(--blue)}
 button{cursor:pointer}
-.user-badge{display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:20px;background:#e9ecef;font-size:.9rem}
-.user-badge strong{color:var(--secondary)}
-.date-display{display:flex;justify-content:center;align-items:center;gap:9px;flex-wrap:wrap;margin:12px 0;color:#666}
-.date-display input{width:auto}
-.tab-nav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--border)}
-.tab-btn{padding:9px 13px;border:0;border-radius:8px;background:#e9ecef;color:#495057;font-weight:bold}
-.tab-btn.active{background:var(--secondary);color:#fff}
-.tab-content{display:none}
-.tab-content.active{display:block}
-.card{padding:14px;margin-bottom:16px;border:1px solid var(--border);border-radius:11px;background:#fff}
-.filter-container,.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px}
-.filter-container{padding:10px;border:1px solid var(--border);border-radius:8px;background:#f8f9fa}
+.user-badge{display:flex;align-items:center;gap:7px;padding:7px 10px;background:#e9ecef;border-radius:20px;font-size:.9rem}
+.user-badge strong{color:var(--blue)}
+.date-row{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap;margin:12px 0;color:#666}
+.date-row input{width:auto}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid var(--line)}
+.tab-btn{padding:9px 12px;border:0;border-radius:7px;background:#e9ecef;color:#495057;font-weight:bold}
+.tab-btn.active{background:var(--blue);color:#fff}
+.tab{display:none}
+.tab.active{display:block}
+.card{padding:14px;margin-bottom:15px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.filters,.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px}
+.filters{padding:10px;border:1px solid var(--line);border-radius:8px;background:#f8f9fa}
 .filter-group{display:flex;flex-direction:column;gap:4px}
-.filter-group label{font-size:.82rem;font-weight:600;color:#495057}
-.table-responsive{width:100%;overflow:auto;margin-top:10px;border:1px solid var(--border);border-radius:8px;-webkit-overflow-scrolling:touch}
+.filter-group label{font-size:.82rem;font-weight:bold;color:#495057}
+.table-wrap{width:100%;overflow:auto;margin-top:10px;border:1px solid var(--line);border-radius:8px;-webkit-overflow-scrolling:touch}
 table{width:100%;border-collapse:collapse;font-size:.82rem;white-space:nowrap}
-th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--border);vertical-align:middle}
+th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);vertical-align:middle}
 th{background:#f1faee;color:#1d3557}
-.category-header td{text-align:left;background:#e9ecef;font-weight:bold}
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:9px 12px;border:0;border-radius:7px;background:var(--success);color:#fff;font-weight:600}
-.btn-primary{background:var(--secondary)}
-.btn-danger{background:var(--primary)}
-.btn-warning{background:#f39c12}
-.btn-muted{background:#6c757d}
-.btn-excel{background:#f4a261}
+.category-row td{text-align:left;background:#e9ecef;font-weight:bold}
+.actions,.pagination{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-top:12px}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:5px;padding:9px 12px;border:0;border-radius:7px;background:var(--green);color:#fff;font-weight:bold}
+.btn-blue{background:var(--blue)}
+.btn-red{background:var(--red)}
+.btn-orange{background:#f39c12}
+.btn-gray{background:#6c757d}
 .btn:disabled{opacity:.55;cursor:not-allowed}
-.action-bar{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.action-bar .btn{flex:1;min-width:155px}
-.item-img{width:42px;height:42px;object-fit:cover;border:1px solid var(--border);border-radius:6px;cursor:pointer}
-.badge-alert,.badge-normal{display:inline-block;padding:4px 7px;border-radius:6px;font-size:.75rem;font-weight:bold}
-.badge-alert{background:#ffe3e3;color:#c92a3b}
-.badge-normal{background:#e6fcf5;color:#0ca678}
 .small-input{width:76px;text-align:center;padding:6px}
+.item-img{width:40px;height:40px;object-fit:cover;border:1px solid var(--line);border-radius:6px;cursor:pointer}
+.badge-low,.badge-ok{display:inline-block;padding:4px 7px;border-radius:6px;font-size:.75rem;font-weight:bold}
+.badge-low{background:#ffe3e3;color:#c92a3b}
+.badge-ok{background:#e6fcf5;color:#0ca678}
 .note{font-size:.84rem;color:#6c757d}
-#loadingOverlay,#loginOverlay,#imageModal{position:fixed;inset:0;display:flex;justify-content:center;align-items:center}
-#loadingOverlay{z-index:9999;background:#ffffffed;color:var(--secondary);font-weight:bold}
-#loginOverlay{display:none;z-index:10000;background:#000b;padding:15px}
-.login-card,.modal-card{width:min(100%,400px);padding:22px;border-radius:13px;background:#fff;box-shadow:0 8px 30px #0004}
+#loading,#loginOverlay,#imageModal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
+#loading{z-index:9999;background:#ffffffed;color:var(--blue);font-weight:bold}
+#loginOverlay{display:none;z-index:10000;padding:15px;background:#000b}
+.login-card,.modal-card{width:min(100%,400px);padding:22px;border-radius:12px;background:#fff;box-shadow:0 8px 30px #0004}
 .login-card{text-align:center}
-.login-card h3{color:var(--primary)}
-#imageModal{display:none;z-index:10001;background:#000c;padding:15px}
+#imageModal{display:none;z-index:10001;padding:15px;background:#000c}
 .modal-card{position:relative;text-align:center}
 .modal-card img{max-width:100%;max-height:55vh;object-fit:contain}
-.modal-close{position:absolute;top:5px;right:10px;border:0;background:none;font-size:1.7rem}
-.partner-chip{display:inline-block;margin:3px;padding:4px 8px;border-radius:5px;background:#e9ecef}
-@media(max-width:600px){body{padding:5px}.container{padding:10px}h1{font-size:1.05rem}.tab-btn{flex:1 1 40%;font-size:.82rem}.filter-container,.form-grid{grid-template-columns:1fr}th,td{padding:7px 5px}}
+.modal-close{position:absolute;top:5px;right:10px;border:0;background:none;font-size:1.6rem}
+.chip{display:inline-block;margin:3px;padding:4px 8px;border-radius:5px;background:#e9ecef}
+@media(max-width:600px){body{padding:5px}.container{padding:10px}h1{font-size:1.05rem}.tab-btn{flex:1 1 40%;font-size:.8rem}.filters,.form-grid{grid-template-columns:1fr}th,td{padding:7px 5px}}
 </style>
 </head>
 <body>
 
-<div id="loadingOverlay">กำลังโหลดข้อมูล...</div>
+<div id="loading">กำลังโหลดข้อมูล...</div>
 
 <div id="loginOverlay">
   <div class="login-card">
-    <h3>🔐 ระบุชื่อผู้ใช้งาน</h3>
-    <p class="note">ชื่อจะใช้บันทึกว่าใครเป็นผู้ทำรายการ</p>
-    <input id="usernameInput" placeholder="พิมพ์ชื่อของคุณ" onkeydown="if(event.key==='Enter')handleLogin()">
-    <button class="btn btn-primary" style="width:100%" onclick="handleLogin()">เข้าสู่ระบบ</button>
+    <h3>ระบุชื่อผู้ใช้งาน</h3>
+    <p class="note">ชื่อจะแสดงในบันทึกการทำรายการ</p>
+    <input id="usernameInput" placeholder="พิมพ์ชื่อของคุณ" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn btn-blue" style="width:100%" onclick="login()">เข้าสู่ระบบ</button>
   </div>
 </div>
 
-<div id="imageModal" onclick="closeImageModal()">
+<div id="imageModal" onclick="closeImage()">
   <div class="modal-card" onclick="event.stopPropagation()">
-    <button class="modal-close" onclick="closeImageModal()">×</button>
-    <h3 id="modalTitle"></h3>
-    <img id="modalImg" alt="รูปสินค้า">
-    <div id="modalDetailsText" class="note" style="text-align:left;line-height:1.8"></div>
+    <button class="modal-close" onclick="closeImage()">×</button>
+    <h3 id="imageTitle"></h3>
+    <img id="imagePreview" alt="รูปสินค้า">
+    <p id="imageDetails" class="note"></p>
   </div>
 </div>
 
 <div class="container">
-  <div class="header">
+  <header class="header">
     <h1>🔥 ระบบจัดการสต็อกร้านหม่าล่าทั่ง Pro Max</h1>
-    <div class="user-badge">👤 ผู้ใช้งาน: <strong id="displayUser">-</strong>
-      <button class="btn btn-muted" style="padding:5px 8px" onclick="logout()">เปลี่ยนชื่อ</button>
+    <div class="user-badge">👤 <strong id="displayUser">-</strong>
+      <button class="btn btn-gray" style="padding:5px 8px" onclick="logout()">เปลี่ยนชื่อ</button>
     </div>
+  </header>
+
+  <div class="date-row">
+    <label for="recordDate">วันที่:</label>
+    <input id="recordDate" type="date" onchange="changeDate()">
+    <span id="historyStatus" class="note" style="display:none;color:#e63946">ดูข้อมูลย้อนหลัง (อ่านอย่างเดียว)</span>
   </div>
 
-  <div class="date-display">
-    <label for="recordDate">📅 วันที่ทำรายการ:</label>
-    <input type="date" id="recordDate">
-    <span id="historyStatus" class="note" style="display:none;color:#e63946;font-weight:bold">กำลังดูข้อมูลย้อนหลัง (อ่านอย่างเดียว)</span>
-  </div>
-
-  <nav class="tab-nav">
-    <button class="tab-btn active" onclick="switchTab('dashboardTab',this)">📊 แดชบอร์ด</button>
-    <button class="tab-btn" onclick="switchTab('orderTab',this)">🛒 สั่งซื้อสินค้า</button>
-    <button class="tab-btn" onclick="switchTab('dailyStockTab',this)">📝 บันทึกประจำวัน</button>
-    <button class="tab-btn" onclick="switchTab('manageTab',this)">⚙️ จัดการข้อมูล</button>
+  <nav class="tabs">
+    <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 แดชบอร์ด</button>
+    <button class="tab-btn" onclick="switchTab('orders',this)">🛒 สั่งซื้อ</button>
+    <button class="tab-btn" onclick="switchTab('daily',this)">📝 บันทึกประจำวัน</button>
+    <button class="tab-btn" onclick="switchTab('manage',this)">⚙️ จัดการสินค้า</button>
   </nav>
 
-  <section id="dashboardTab" class="tab-content active">
+  <section id="dashboard" class="tab active">
     <div class="card">
-      <h3>📊 แดชบอร์ดและค้นหาสินค้า</h3>
-      <div class="filter-container">
-        <div class="filter-group"><label>ค้นหาชื่อหรือรหัส</label><input id="searchInput" placeholder="พิมพ์เพื่อค้นหา" oninput="debounceSearch('dash')"></div>
-        <div class="filter-group"><label>แหล่งซื้อ</label><select id="dashSupplierFilter" onchange="renderDashboard()"><option value="all">ทุกแหล่งซื้อ</option></select></div>
-        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dashDayFilter" onchange="renderDashboard()"><option value="all">ทุกวัน</option><option>ทุกวัน</option><option>วันจันทร์</option><option>วันอังคาร</option><option>วันพุธ</option><option>วันพฤหัสบดี</option><option>วันศุกร์</option><option>วันเสาร์</option><option>วันอาทิตย์</option></select></div>
+      <h3>📊 แดชบอร์ดสินค้า</h3>
+      <div class="filters">
+        <div class="filter-group"><label>ค้นหาสินค้าหรือรหัส</label><input id="dashSearch" oninput="scheduleRender('dashboard')" placeholder="พิมพ์ค้นหา"></div>
+        <div class="filter-group"><label>แหล่งซื้อ</label><select id="dashSupplier" onchange="resetPageAndRender('dashboard')"></select></div>
+        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dashDay" onchange="resetPageAndRender('dashboard')"></select></div>
       </div>
-      <div class="table-responsive"><table>
+      <div class="table-wrap"><table>
         <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>แหล่งซื้อ</th><th>วันสั่ง</th><th>หน่วย</th><th>คงเหลือ</th><th>ใช้ 7 วัน</th><th>เฉลี่ย/วัน</th><th>หมายเหตุ</th><th>สถานะ</th></tr></thead>
-        <tbody id="dashTableBody"></tbody>
+        <tbody id="dashBody"></tbody>
       </table></div>
-      <div class="action-bar"><button class="btn btn-excel" onclick="exportToExcel()">📊 ส่งออก CSV</button></div>
+      <div id="dashPages" class="pagination"></div>
+      <div class="actions"><button class="btn btn-orange" onclick="exportStockCsv()">ส่งออกสต็อก CSV</button></div>
     </div>
   </section>
 
-  <section id="orderTab" class="tab-content">
+  <section id="orders" class="tab">
     <div class="card">
-      <h3>🛒 เตรียมรายการสั่งซื้อสินค้า</h3>
-      <div class="filter-container">
-        <div class="filter-group"><label>เลือกพาร์ทเนอร์</label><select id="orderPartnerSelect" onchange="renderOrderList()"></select></div>
-        <div class="filter-group"><label>กรองวันสั่งซื้อ</label><select id="orderDaySelect" onchange="renderOrderList()"><option value="all">ทุกวัน</option><option>ทุกวัน</option><option>วันจันทร์</option><option>วันอังคาร</option><option>วันพุธ</option><option>วันพฤหัสบดี</option><option>วันศุกร์</option><option>วันเสาร์</option><option>วันอาทิตย์</option></select></div>
+      <h3>🛒 เตรียมรายการสั่งซื้อ</h3>
+      <div class="filters">
+        <div class="filter-group"><label>เลือกแหล่งซื้อ</label><select id="orderSupplier" onchange="resetPageAndRender('orders')"></select></div>
+        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="orderDay" onchange="resetPageAndRender('orders')"></select></div>
       </div>
-      <div class="table-responsive"><table>
+      <div class="table-wrap"><table>
         <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>หน่วย</th><th>คงเหลือ</th><th>เฉลี่ย/วัน</th><th>สถานะ</th><th>จำนวนสั่ง</th></tr></thead>
-        <tbody id="orderTableBody"></tbody>
+        <tbody id="orderBody"></tbody>
       </table></div>
-      <div class="action-bar" id="orderActionBar"></div>
-    </div>
-  </section>
-
-  <section id="dailyStockTab" class="tab-content">
-    <div class="card">
-      <h3>📝 กรอกสต็อกประจำวัน</h3>
-      <p class="note">กรอกจำนวนรับเข้าจริงและยอดเบิกใช้ เมื่อบันทึกสำเร็จ ช่องจำนวนจะกลับเป็น 0</p>
-      <div class="filter-container">
-        <div class="filter-group"><label>ค้นหาชื่อหรือรหัส</label><input id="dailySearchInput" placeholder="พิมพ์เพื่อค้นหา" oninput="debounceSearch('daily')"></div>
-        <div class="filter-group"><label>แหล่งซื้อ</label><select id="dailySupplierFilter" onchange="renderDailyStockTable()"><option value="all">ทุกแหล่งซื้อ</option></select></div>
-        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dailyDayFilter" onchange="renderDailyStockTable()"><option value="all">ทุกวัน</option><option>ทุกวัน</option><option>วันจันทร์</option><option>วันอังคาร</option><option>วันพุธ</option><option>วันพฤหัสบดี</option><option>วันศุกร์</option><option>วันเสาร์</option><option>วันอาทิตย์</option></select></div>
+      <div id="orderPages" class="pagination"></div>
+      <div class="actions">
+        <button class="btn btn-blue" onclick="copyOrder()">คัดลอกรายการสั่งซื้อ</button>
+        <button class="btn btn-orange" onclick="exportOrderCsv()">ส่งออกรายการสั่งซื้อ CSV</button>
+        <button class="btn btn-orange" onclick="confirmOrderPlaced()">ยืนยันสั่งแล้วและเคลียร์จำนวน</button>
       </div>
-      <div class="table-responsive"><table>
-        <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หน่วย</th><th>คงเหลือ</th><th>รับเข้าจริง</th><th>เบิกใช้</th><th>หมายเหตุ</th><th>จัดการ</th></tr></thead>
-        <tbody id="dailyTableBody"></tbody>
-      </table></div>
-      <div class="action-bar"><button class="btn" id="saveBtn" onclick="saveDailyData()">💾 บันทึกรับของและตัดยอด</button></div>
     </div>
   </section>
 
-  <section id="manageTab" class="tab-content">
+  <section id="daily" class="tab">
     <div class="card">
-      <h3>🤝 เพิ่มพาร์ทเนอร์และหมวดหมู่</h3>
+      <h3>📝 รับของเข้าจริงและบันทึกยอดใช้</h3>
+      <p class="note">หลังบันทึกสำเร็จ ระบบจะเคลียร์ช่องรับเข้าและเบิกใช้เป็น 0</p>
+      <div class="filters">
+        <div class="filter-group"><label>ค้นหาสินค้าหรือรหัส</label><input id="dailySearch" oninput="scheduleRender('daily')" placeholder="พิมพ์ค้นหา"></div>
+        <div class="filter-group"><label>แหล่งซื้อ</label><select id="dailySupplier" onchange="resetPageAndRender('daily')"></select></div>
+        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dailyDay" onchange="resetPageAndRender('daily')"></select></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หน่วย</th><th>คงเหลือ</th><th>รับเข้าจริง</th><th>เบิกใช้</th><th>หมายเหตุ</th></tr></thead>
+        <tbody id="dailyBody"></tbody>
+      </table></div>
+      <div id="dailyPages" class="pagination"></div>
+      <div class="actions"><button class="btn" id="saveDailyBtn" onclick="saveDaily()">💾 บันทึกประจำวัน</button></div>
+    </div>
+  </section>
+
+  <section id="manage" class="tab">
+    <div class="card">
+      <h3>🤝 จัดการแหล่งซื้อและหมวดหมู่</h3>
       <div class="form-grid">
-        <input id="newPartnerName" placeholder="ชื่อพาร์ทเนอร์">
-        <button class="btn btn-primary" onclick="addPartner()">เพิ่มพาร์ทเนอร์</button>
-        <input id="newCategoryName" placeholder="ชื่อหมวดหมู่">
-        <button class="btn btn-primary" onclick="addCategory()">เพิ่มหมวดหมู่</button>
+        <input id="newPartner" placeholder="ชื่อแหล่งซื้อใหม่">
+        <button class="btn btn-blue" onclick="addPartner()">เพิ่มแหล่งซื้อ</button>
+        <input id="newCategoryName" placeholder="ชื่อหมวดหมู่ใหม่">
+        <button class="btn btn-blue" onclick="addCategory()">เพิ่มหมวดหมู่</button>
       </div>
-      <div id="partnerListContainer"></div>
+      <div id="partnerList"></div>
     </div>
 
     <div class="card">
-      <h3>📦 เพิ่มสินค้าใหม่</h3>
+      <h3>📦 เพิ่มสินค้า</h3>
       <div class="form-grid">
         <input id="newCode" placeholder="รหัสสินค้า">
         <input id="newName" placeholder="ชื่อสินค้า *">
-        <select id="newCategory"><option value="auto">🤖 แยกหมวดอัตโนมัติ</option></select>
+        <select id="newCategory"></select>
         <select id="newSupplier"></select>
-        <select id="newOrderDay"><option>ทุกวัน</option><option>วันจันทร์</option><option>วันอังคาร</option><option>วันพุธ</option><option>วันพฤหัสบดี</option><option>วันศุกร์</option><option>วันเสาร์</option><option>วันอาทิตย์</option></select>
-        <input id="newUnit" placeholder="หน่วย เช่น กก., ถุง *">
+        <select id="newOrderDay"></select>
+        <input id="newUnit" placeholder="หน่วย *">
         <input id="newStock" type="number" min="0" step="any" placeholder="สต็อกตั้งต้น *">
         <input id="newNote" placeholder="หมายเหตุ">
         <input id="newImage" type="file" accept="image/*">
-        <button class="btn" onclick="addItem()">บันทึกสินค้าใหม่</button>
+        <button class="btn" onclick="addItem()">บันทึกสินค้า</button>
       </div>
-      <p class="note">รูปใหม่และรูปเก่าจะเก็บใน Firebase Storage โดยในฐานข้อมูลจะเก็บเฉพาะ URL</p>
-      <div class="action-bar"><button class="btn btn-warning" id="migrateImagesBtn" onclick="migrateOldImages()">🖼️ ย้ายรูปเก่าไป Firebase Storage</button></div>
+      <p class="note">รูปใหม่จะถูกบีบอัดและเก็บใน Firebase Storage</p>
+      <div class="actions"><button class="btn btn-orange" id="migrateBtn" onclick="migrateOldImages()">ย้ายรูป Base64 เก่าไป Storage</button></div>
       <p id="migrationStatus" class="note"></p>
     </div>
 
     <div class="card">
-      <h3>⚙️ ค้นหาและจัดการสินค้า</h3>
-      <div class="filter-container">
-        <div class="filter-group"><label>ค้นหาชื่อหรือรหัส</label><input id="manageSearchInput" placeholder="พิมพ์เพื่อค้นหา" oninput="debounceSearch('manage')"></div>
-        <div class="filter-group"><label>หมวดหมู่</label><select id="manageCategoryFilter" onchange="renderManageTable()"><option value="all">ทุกหมวดหมู่</option></select></div>
-        <div class="filter-group"><label>แหล่งซื้อ</label><select id="manageSupplierFilter" onchange="renderManageTable()"><option value="all">ทุกแหล่งซื้อ</option></select></div>
+      <h3>⚙️ ค้นหาและแก้ไขสินค้า</h3>
+      <div class="filters">
+        <div class="filter-group"><label>ค้นหาสินค้าหรือรหัส</label><input id="manageSearch" oninput="scheduleRender('manage')" placeholder="พิมพ์ค้นหา"></div>
+        <div class="filter-group"><label>หมวดหมู่</label><select id="manageCategory" onchange="resetPageAndRender('manage')"></select></div>
+        <div class="filter-group"><label>แหล่งซื้อ</label><select id="manageSupplier" onchange="resetPageAndRender('manage')"></select></div>
       </div>
-      <div class="table-responsive"><table>
+      <div class="table-wrap"><table>
         <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>แหล่งซื้อ</th><th>วันสั่ง</th><th>หน่วย</th><th>ยอดใช้ 7 วัน</th><th>คงเหลือ</th><th>หมายเหตุ</th><th>ลบ</th></tr></thead>
-        <tbody id="manageTableBody"></tbody>
+        <tbody id="manageBody"></tbody>
       </table></div>
-      <div class="action-bar"><button class="btn btn-muted" onclick="resetDefaultData()">🔄 รีเซ็ตข้อมูลเริ่มต้น</button></div>
+      <div id="managePages" class="pagination"></div>
     </div>
 
     <div class="card">
-      <h3>📥 นำเข้าและดาวน์โหลดแบบฟอร์ม CSV</h3>
+      <h3>📥 นำเข้า/ส่งออก CSV</h3>
       <div class="form-grid">
-        <button class="btn btn-primary" onclick="downloadExcelTemplate()">ดาวน์โหลดแบบฟอร์ม CSV</button>
-        <input id="importExcelFile" type="file" accept=".csv,text/csv" onchange="importExcelData(this)">
+        <button class="btn btn-blue" onclick="downloadTemplate()">ดาวน์โหลดแบบฟอร์ม CSV</button>
+        <input id="importFile" type="file" accept=".csv,text/csv" onchange="importCsv(this)">
       </div>
-      <p class="note">หัวตาราง CSV: รหัสสินค้า, ชื่อวัตถุดิบ, หมวดหมู่, แหล่งซื้อ, วันสั่งซื้อ, หน่วย, สต็อกตั้งต้น, หมายเหตุ</p>
+      <p class="note">หัวตาราง CSV: รหัสสินค้า, ชื่อสินค้า, หมวดหมู่, แหล่งซื้อ, วันสั่งซื้อ, หน่วย, สต็อกตั้งต้น, หมายเหตุ</p>
     </div>
   </section>
 </div>
@@ -218,28 +222,30 @@ th{background:#f1faee;color:#1d3557}
 <script>
 "use strict";
 
-/* ใส่ API key จริงจาก Firebase Console แทน YOUR_API_KEY */
+/* ใส่ค่า Firebase จริงจาก Project settings > Your apps */
 const firebaseConfig = {
-  apiKey:"AIzaSyDie7nCV9MK1KYfmnwJ7bToD-fQPTbMOug",
+  apiKey: "AIzaSyDie7nCV9MK1KYfmnwJ7bToD-fQPTbMOug",
   authDomain: "malatang-stock.firebaseapp.com",
   databaseURL: "https://malatang-stock-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId: "malatang-stock",
   storageBucket: "malatang-stock.firebasestorage.app",
   messagingSenderId: "767469911960",
-  appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed"
+  appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed",
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const storage = firebase.storage();
+const auth = firebase.auth();
 const ROOT = "malatang_stock";
+const PAGE_SIZE = 30;
 
-const defaultCategories=["ผัก","เนื้อสัตว์","เส้น","เต้าหู้","อาหารแช่แข็ง","เครื่องปรุง/น้ำซุป"];
-const defaultPartners=["โกดังของเราเอง","มหาชัย","P&P","Makro"];
-const defaultInventory=[
- {code:"M01",name:"เส้นหนุบจีน",category:"เส้น",supplier:"โกดังของเราเอง",orderDay:"วันจันทร์",unit:"ถุง",stock:12,buyQty:0,usedToday:0,total7Days:28,note:"แช่น้ำก่อนใช้",image:""},
- {code:"M03",name:"สามชั้นสไลด์",category:"เนื้อสัตว์",supplier:"Makro",orderDay:"ทุกวัน",unit:"แพ็ค",stock:15,buyQty:0,usedToday:0,total7Days:52,note:"ช่องฟรีซตู้ล่าง",image:""},
- {code:"M05",name:"ผักบุ้ง",category:"ผัก",supplier:"มหาชัย",orderDay:"วันพฤหัสบดี",unit:"กก.",stock:5.5,buyQty:0,usedToday:0,total7Days:14.5,note:"รับของสดทุกเช้า",image:""}
+const defaultCategories = ["ผัก","เนื้อสัตว์","เส้น","เต้าหู้","อาหารแช่แข็ง","เครื่องปรุง/น้ำซุป"];
+const defaultPartners = ["โกดังของเราเอง","มหาชัย","P&P","Makro"];
+const defaultInventory = [
+  {code:"M01",name:"เส้นหนุบจีน",category:"เส้น",supplier:"โกดังของเราเอง",orderDay:"วันจันทร์",unit:"ถุง",stock:12,buyQty:0,usedToday:0,total7Days:28,note:"แช่น้ำก่อนใช้",image:""},
+  {code:"M03",name:"สามชั้นสไลด์",category:"เนื้อสัตว์",supplier:"Makro",orderDay:"ทุกวัน",unit:"แพ็ค",stock:15,buyQty:0,usedToday:0,total7Days:52,note:"ช่องฟรีซตู้ล่าง",image:""},
+  {code:"M05",name:"ผักบุ้ง",category:"ผัก",supplier:"มหาชัย",orderDay:"วันพฤหัสบดี",unit:"กก.",stock:5.5,buyQty:0,usedToday:0,total7Days:14.5,note:"รับของสดทุกเช้า",image:""}
 ];
 
 let categories=[...defaultCategories];
@@ -247,9 +253,11 @@ let partners=[...defaultPartners];
 let inventory=[];
 let baseInventory=[];
 let currentUser=localStorage.getItem("malatang_user")||"";
-let activeTab="dashboardTab";
+let activeTab="dashboard";
 let searchTimer=null;
 let saveInProgress=false;
+let dailyDraft={};
+const pageState={dashboard:1,orders:1,daily:1,manage:1};
 
 function localDateString(date=new Date()){
   const y=date.getFullYear(),m=String(date.getMonth()+1).padStart(2,"0"),d=String(date.getDate()).padStart(2,"0");
@@ -273,12 +281,14 @@ function normalizeItems(data){
     note:item.note||"",image:item.image||""
   }));
 }
-
+function safeFileName(value){
+  return String(value||"item").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,60)||"item";
+}
 function checkLogin(){
   document.getElementById("loginOverlay").style.display=currentUser?"none":"flex";
   document.getElementById("displayUser").textContent=currentUser||"-";
 }
-function handleLogin(){
+function login(){
   const name=document.getElementById("usernameInput").value.trim();
   if(!name){alert("กรุณากรอกชื่อผู้ใช้งาน");return}
   currentUser=name;
@@ -290,6 +300,11 @@ function logout(){
   currentUser="";
   document.getElementById("usernameInput").value="";
   checkLogin();
+}
+
+function ensureFirebaseAuth(){
+  if(auth.currentUser)return Promise.resolve(auth.currentUser);
+  return auth.signInAnonymously().then(result=>result.user);
 }
 
 function loadData(){
@@ -308,10 +323,11 @@ function loadData(){
     inventory=baseInventory.map(item=>({...item}));
     updateDropdowns();
     renderActiveTab();
-    document.getElementById("loadingOverlay").style.display="none";
+    document.getElementById("loading").style.display="none";
+    if(!isToday())changeDate();
   }).catch(error=>{
     console.error(error);
-    document.getElementById("loadingOverlay").textContent="โหลดข้อมูลไม่สำเร็จ: "+error.message;
+    document.getElementById("loading").textContent="โหลดข้อมูลไม่สำเร็จ: "+error.message;
     alert("เกิดข้อผิดพลาดในการโหลดข้อมูล: "+error.message);
   });
 }
@@ -319,346 +335,283 @@ loadData();
 
 function switchTab(tabId,button){
   activeTab=tabId;
-  document.querySelectorAll(".tab-content").forEach(el=>el.classList.toggle("active",el.id===tabId));
+  document.querySelectorAll(".tab").forEach(el=>el.classList.toggle("active",el.id===tabId));
   document.querySelectorAll(".tab-btn").forEach(el=>el.classList.toggle("active",el===button));
   renderActiveTab();
 }
 function renderActiveTab(){
-  if(activeTab==="dashboardTab")renderDashboard();
-  if(activeTab==="orderTab")renderOrderList();
-  if(activeTab==="dailyStockTab")renderDailyStockTable();
-  if(activeTab==="manageTab")renderManageTable();
+  if(activeTab==="dashboard")renderDashboard();
+  if(activeTab==="orders")renderOrders();
+  if(activeTab==="daily")renderDaily();
+  if(activeTab==="manage")renderManage();
+}
+function fillSelect(id,values,allLabel=null){
+  const el=document.getElementById(id);if(!el)return;
+  const old=el.value;
+  el.innerHTML=allLabel?`<option value="all">${escapeHtml(allLabel)}</option>`:"";
+  values.forEach(value=>el.insertAdjacentHTML("beforeend",`<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`));
+  if([...el.options].some(option=>option.value===old))el.value=old;
 }
 function updateDropdowns(){
-  function fill(id,values,allLabel){
-    const el=document.getElementById(id);if(!el)return;
-    const old=el.value;
-    el.innerHTML=allLabel?`<option value="all">${escapeHtml(allLabel)}</option>`:"";
-    values.forEach(v=>el.insertAdjacentHTML("beforeend",`<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`));
-    if([...el.options].some(o=>o.value===old))el.value=old;
-  }
-  fill("newCategory",categories);
+  const days=["ทุกวัน","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์","วันอาทิตย์"];
+  fillSelect("newCategory",categories);
   document.getElementById("newCategory").insertAdjacentHTML("afterbegin",'<option value="auto">🤖 แยกหมวดอัตโนมัติ</option>');
   document.getElementById("newCategory").value="auto";
-  fill("newSupplier",partners);
-  fill("dashSupplierFilter",partners,"🌐 ทุกแหล่งซื้อ");
-  fill("dailySupplierFilter",partners,"🌐 ทุกแหล่งซื้อ");
-  fill("orderPartnerSelect",partners);
-  fill("manageSupplierFilter",partners,"🌐 ทุกแหล่งซื้อ");
-  fill("manageCategoryFilter",categories,"🌐 ทุกหมวดหมู่");
-  document.getElementById("partnerListContainer").innerHTML=partners.map((p,i)=>
-    `<span class="partner-chip">${escapeHtml(p)} ${partners.length>1?`<button class="btn btn-danger" style="padding:2px 6px" onclick="deletePartner(${i})">×</button>`:""}</span>`
+  fillSelect("newSupplier",partners);
+  fillSelect("newOrderDay",days);
+  fillSelect("dashSupplier",partners,"ทุกแหล่งซื้อ");
+  fillSelect("dailySupplier",partners,"ทุกแหล่งซื้อ");
+  fillSelect("orderSupplier",partners);
+  fillSelect("manageSupplier",partners,"ทุกแหล่งซื้อ");
+  fillSelect("manageCategory",categories,"ทุกหมวดหมู่");
+  fillSelect("dashDay",days,"ทุกวันสั่งซื้อ");
+  fillSelect("dailyDay",days,"ทุกวันสั่งซื้อ");
+  fillSelect("orderDay",days,"ทุกวันสั่งซื้อ");
+  document.getElementById("partnerList").innerHTML=partners.map((p,i)=>
+    `<span class="chip">${escapeHtml(p)} ${partners.length>1?`<button class="btn btn-red" style="padding:2px 6px" onclick="deletePartner(${i})">×</button>`:""}</span>`
   ).join("");
 }
-function debounceSearch(type){
+
+function scheduleRender(tab){
   clearTimeout(searchTimer);
-  searchTimer=setTimeout(()=>{
-    if(type==="dash"&&activeTab==="dashboardTab")renderDashboard();
-    if(type==="daily"&&activeTab==="dailyStockTab")renderDailyStockTable();
-    if(type==="manage"&&activeTab==="manageTab")renderManageTable();
-  },180);
+  pageState[tab]=1;
+  searchTimer=setTimeout(()=>{if(activeTab===tab)renderActiveTab()},180);
 }
-function detectCategory(name){
-  const n=String(name).toLowerCase();
-  if(["ผัก","เห็ด","กวางตุ้ง"].some(x=>n.includes(x)))return "ผัก";
-  if(["หมู","เนื้อ","ไก่","สามชั้น","กุ้ง"].some(x=>n.includes(x)))return "เนื้อสัตว์";
-  if(["เส้น","บะหมี่","วุ้นเส้น"].some(x=>n.includes(x)))return "เส้น";
-  if(n.includes("เต้าหู้"))return "เต้าหู้";
-  if(["เกี๊ยว","ลูกชิ้น","ปูอัด"].some(x=>n.includes(x)))return "อาหารแช่แข็ง";
-  if(["ซุป","น้ำจิ้ม","น้ำพริก"].some(x=>n.includes(x)))return "เครื่องปรุง/น้ำซุป";
-  return categories[0]||"อื่นๆ";
+function resetPageAndRender(tab){pageState[tab]=1;renderActiveTab()}
+function paginate(rows,tab,containerId){
+  const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
+  pageState[tab]=Math.min(Math.max(1,pageState[tab]||1),totalPages);
+  const start=(pageState[tab]-1)*PAGE_SIZE;
+  const container=document.getElementById(containerId);
+  if(container){
+    container.innerHTML=rows.length>PAGE_SIZE
+      ? `<button onclick="changePage('${tab}',${pageState[tab]-1})" ${pageState[tab]<=1?"disabled":""}>ก่อนหน้า</button><span>หน้า ${pageState[tab]} / ${totalPages} · ${rows.length} รายการ</span><button onclick="changePage('${tab}',${pageState[tab]+1})" ${pageState[tab]>=totalPages?"disabled":""}>ถัดไป</button>`
+      : `<span class="note">${rows.length} รายการ</span>`;
+  }
+  return rows.slice(start,start+PAGE_SIZE).map((item,offset)=>({item,index:start+offset}));
 }
-function statusHtml(item){
-  return safeNumber(item.stock)<=3?'<span class="badge-alert">⚠️ สั่งเพิ่มด่วน</span>':'<span class="badge-normal">ปกติ</span>';
+function changePage(tab,page){pageState[tab]=page;renderActiveTab()}
+function groupedRows(rows,colspan,renderer){
+  if(!rows.length)return `<tr><td colspan="${colspan}" class="note">ไม่พบรายการสินค้า</td></tr>`;
+  const groups=new Map();
+  rows.forEach(row=>{
+    const cat=row.item.category||"อื่นๆ";
+    if(!groups.has(cat))groups.set(cat,[]);
+    groups.get(cat).push(row);
+  });
+  let html="";
+  groups.forEach((items,cat)=>{
+    html+=`<tr class="category-row"><td colspan="${colspan}">📁 ${escapeHtml(cat)}</td></tr>`;
+    html+=items.map(renderer).join("");
+  });
+  return html;
 }
-function imageHtml(item,index){
-  if(!item.image)return '<span class="note">ไม่มีรูป</span>';
-  return `<img class="item-img" loading="lazy" src="${escapeHtml(item.image)}" alt="สินค้า" onclick="openImage(${index})">`;
+function imageCell(item,index){
+  return item.image
+    ? `<img class="item-img" loading="lazy" src="${escapeHtml(item.image)}" alt="รูปสินค้า" onclick="showImage(${index})">`
+    : '<span class="note">ไม่มีรูป</span>';
 }
-function openImage(index){
+function showImage(index){
   const item=inventory[index];if(!item)return;
-  document.getElementById("modalTitle").textContent=`${item.name} ${item.code?`(${item.code})`:""}`;
-  document.getElementById("modalImg").src=item.image||"";
-  document.getElementById("modalDetailsText").innerHTML=
-    `หมวดหมู่: ${escapeHtml(item.category)}<br>แหล่งซื้อ: ${escapeHtml(item.supplier)}<br>วันสั่ง: ${escapeHtml(item.orderDay)}<br>คงเหลือ: ${safeNumber(item.stock)} ${escapeHtml(item.unit)}<br>ยอดใช้สะสม: ${safeNumber(item.total7Days)} ${escapeHtml(item.unit)}<br>หมายเหตุ: ${escapeHtml(item.note||"-")}`;
+  document.getElementById("imageTitle").textContent=`${item.name}${item.code?` (${item.code})`:""}`;
+  document.getElementById("imagePreview").src=item.image||"";
+  document.getElementById("imageDetails").textContent=`หมวด ${item.category} · แหล่งซื้อ ${item.supplier} · คงเหลือ ${item.stock} ${item.unit} · ${item.note||"-"}`;
   document.getElementById("imageModal").style.display="flex";
 }
-function closeImageModal(){document.getElementById("imageModal").style.display="none"}
-
-function groupRows(rows,columns,rowBuilder){
-  if(!rows.length)return `<tr><td colspan="${columns}" style="padding:20px;color:#6c757d">ไม่พบรายการสินค้า</td></tr>`;
-  const groups=new Map();
-  rows.forEach(x=>{const cat=x.item.category||"อื่นๆ";if(!groups.has(cat))groups.set(cat,[]);groups.get(cat).push(x)});
-  let html="";
-  for(const [cat,items] of groups){
-    html+=`<tr class="category-header"><td colspan="${columns}">📁 หมวด: ${escapeHtml(cat)}</td></tr>`;
-    html+=items.map(rowBuilder).join("");
-  }
-  return html;
+function closeImage(){document.getElementById("imageModal").style.display="none"}
+function statusBadge(item){
+  return safeNumber(item.stock)<=3?'<span class="badge-low">⚠️ สั่งเพิ่มด่วน</span>':'<span class="badge-ok">ปกติ</span>';
 }
 
 function renderDashboard(){
-  const body=document.getElementById("dashTableBody");if(!body)return;
-  const key=document.getElementById("searchInput").value.toLowerCase().trim();
-  const sup=document.getElementById("dashSupplierFilter").value;
-  const day=document.getElementById("dashDayFilter").value;
-  const rows=inventory.map((item,index)=>({item,index})).filter(({item})=>
+  const key=document.getElementById("dashSearch").value.trim().toLowerCase();
+  const supplier=document.getElementById("dashSupplier").value;
+  const day=document.getElementById("dashDay").value;
+  const filtered=inventory.filter(item=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
-    (sup==="all"||item.supplier===sup)&&(day==="all"||item.orderDay===day));
-  body.innerHTML=groupRows(rows,12,({item,index})=>`<tr>
-    <td>${imageHtml(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
+    (supplier==="all"||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
+  );
+  const rows=paginate(filtered,"dashboard","dashPages");
+  document.getElementById("dashBody").innerHTML=groupedRows(rows,12,({item,index})=>`
+    <tr><td>${imageCell(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
     <td style="text-align:left;font-weight:bold">${escapeHtml(item.name)}</td>
     <td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.supplier)}</td>
     <td>${escapeHtml(item.orderDay)}</td><td>${escapeHtml(item.unit)}</td>
-    <td style="font-weight:bold;color:${item.stock<=3?"#e63946":"#2a9d8f"}">${item.stock}</td>
-    <td>${item.total7Days}</td><td>${(item.total7Days/7).toFixed(1)}</td>
-    <td>${escapeHtml(item.note||"-")}</td><td>${statusHtml(item)}</td></tr>`);
+    <td>${safeNumber(item.stock)}</td><td>${safeNumber(item.total7Days)}</td>
+    <td>${(safeNumber(item.total7Days)/7).toFixed(1)}</td>
+    <td>${escapeHtml(item.note||"-")}</td><td>${statusBadge(item)}</td></tr>`);
 }
 
-function renderOrderList(){
-  const body=document.getElementById("orderTableBody");
-  const supplier=document.getElementById("orderPartnerSelect").value;
-  const day=document.getElementById("orderDaySelect").value;
-  const rows=inventory.map((item,index)=>({item,index})).filter(({item})=>
-    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day));
-  body.innerHTML=rows.length?rows.map(({item,index})=>`<tr>
-    <td>${imageHtml(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
+function renderOrders(){
+  const supplier=document.getElementById("orderSupplier").value;
+  const day=document.getElementById("orderDay").value;
+  const filtered=inventory.filter(item=>(!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day));
+  const rows=paginate(filtered,"orders","orderPages");
+  document.getElementById("orderBody").innerHTML=rows.length?rows.map(({item,index})=>`
+    <tr><td>${imageCell(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
     <td style="text-align:left;font-weight:bold">${escapeHtml(item.name)}</td>
-    <td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.unit)}</td><td>${item.stock}</td>
-    <td>${(item.total7Days/7).toFixed(1)}</td><td>${statusHtml(item)}</td>
-    <td><input class="small-input" type="number" min="0" step="any" id="order_qty_${index}" value="${safeNumber(item.buyQty)}" ${isToday()?"":"disabled"} onchange="updateOrderQty(${index},this.value)"></td></tr>`
-  ).join(""):'<tr><td colspan="9" style="padding:20px">ไม่พบรายการสินค้า</td></tr>';
-
-  const actions=document.getElementById("orderActionBar");
-  if(supplier==="Makro"){
-    actions.innerHTML=`
-      <button class="btn btn-primary" onclick="generateMakroPrintPDF()">📄 พิมพ์ใบสั่งซื้อ</button>
-      <button class="btn btn-excel" onclick="generateMakroExcel()">📊 ดาวน์โหลด CSV</button>
-      <button class="btn btn-warning" onclick="markOrderPlaced()">✅ ยืนยันสั่งแล้วและเคลียร์จำนวน</button>`;
-  }else{
-    actions.innerHTML=`
-      <button class="btn btn-primary" onclick="copyOrderText()">📋 คัดลอกรายการสั่งซื้อ</button>
-      <button class="btn btn-warning" onclick="markOrderPlaced()">✅ ยืนยันสั่งแล้วและเคลียร์จำนวน</button>`;
-  }
+    <td>${escapeHtml(item.category)}</td><td>${escapeHtml(item.unit)}</td>
+    <td>${safeNumber(item.stock)}</td><td>${(safeNumber(item.total7Days)/7).toFixed(1)}</td>
+    <td>${statusBadge(item)}</td>
+    <td><input class="small-input" type="number" min="0" step="any" value="${safeNumber(item.buyQty)}" ${isToday()?"":"disabled"} onchange="updateOrderQuantity(${index},this.value)"></td></tr>`
+  ).join(""):'<tr><td colspan="9" class="note">ไม่พบสินค้า</td></tr>';
 }
-async function updateOrderQty(index,value){
+async function updateOrderQuantity(index,value){
   if(!isToday()){alert("แก้ไขรายการสั่งซื้อย้อนหลังไม่ได้");return}
   const qty=Math.max(0,Number.parseFloat(value)||0);
   inventory[index].buyQty=qty;
   baseInventory[index].buyQty=qty;
   try{await db.ref(`${ROOT}/inventory/${index}/buyQty`).set(qty)}
-  catch(e){alert("บันทึกจำนวนสั่งซื้อไม่สำเร็จ: "+e.message)}
+  catch(error){alert("บันทึกจำนวนสั่งซื้อไม่สำเร็จ: "+error.message)}
 }
-async function markOrderPlaced(){
+async function confirmOrderPlaced(){
   if(!isToday()){alert("ดูข้อมูลย้อนหลังได้อย่างเดียว");return}
-  const supplier=document.getElementById("orderPartnerSelect").value;
-  const day=document.getElementById("orderDaySelect").value;
+  const supplier=document.getElementById("orderSupplier").value;
+  const day=document.getElementById("orderDay").value;
   const indexes=inventory.map((item,index)=>({item,index})).filter(({item})=>
-    item.supplier===supplier&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0
-  ).map(x=>x.index);
-  if(!indexes.length){alert("ไม่มีจำนวนสั่งซื้อให้เคลียร์สำหรับรายการที่เลือก");return}
-  if(!confirm(`ยืนยันว่าสั่งของจาก "${supplier}" แล้ว และเคลียร์จำนวนสั่งซื้อใช่หรือไม่?`))return;
+    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0
+  ).map(row=>row.index);
+  if(!indexes.length){alert("ไม่มีจำนวนสั่งซื้อให้เคลียร์");return}
+  if(!confirm("ยืนยันสั่งซื้อแล้วและเคลียร์จำนวนที่กรอกใช่หรือไม่?"))return;
   try{
-    await Promise.all(indexes.map(i=>db.ref(`${ROOT}/inventory/${i}/buyQty`).set(0)));
-    indexes.forEach(i=>{inventory[i].buyQty=0;baseInventory[i].buyQty=0});
-    renderOrderList();
-    alert("ยืนยันสั่งซื้อแล้ว และเคลียร์จำนวนเรียบร้อย");
-  }catch(e){alert("เคลียร์จำนวนไม่สำเร็จ: "+e.message)}
+    await Promise.all(indexes.map(index=>db.ref(`${ROOT}/inventory/${index}/buyQty`).set(0)));
+    indexes.forEach(index=>{inventory[index].buyQty=0;baseInventory[index].buyQty=0});
+    renderOrders();
+    alert("เคลียร์จำนวนสั่งซื้อเรียบร้อย");
+  }catch(error){alert("เคลียร์จำนวนไม่สำเร็จ: "+error.message)}
 }
-function copyOrderText(){
-  const supplier=document.getElementById("orderPartnerSelect").value;
-  const day=document.getElementById("orderDaySelect").value;
-  const rows=inventory.filter(x=>x.supplier===supplier&&(day==="all"||x.orderDay===day)&&safeNumber(x.buyQty)>0);
-  if(!rows.length){alert("ยังไม่มีจำนวนสั่งซื้อ");return}
-  let text=`รายการสั่งซื้อ: ${supplier}\nวันที่: ${document.getElementById("recordDate").value}\nผู้สั่ง: ${currentUser||"-"}\n`;
-  rows.forEach(x=>text+=`- ${x.code?x.code+" ":""}${x.name} ${x.buyQty} ${x.unit}\n`);
-  if(navigator.clipboard&&location.protocol==="https:"){
-    navigator.clipboard.writeText(text).then(()=>alert("คัดลอกรายการแล้ว")).catch(()=>fallbackCopy(text));
-  }else fallbackCopy(text);
-}
-function fallbackCopy(text){
-  const el=document.createElement("textarea");el.value=text;document.body.appendChild(el);el.select();
-  try{document.execCommand("copy");alert("คัดลอกรายการแล้ว")}catch(e){alert(text)}
-  el.remove();
-}
-function generateMakroPrintPDF(){
-  const rows=inventory.filter(x=>x.supplier==="Makro"&&safeNumber(x.buyQty)>0);
-  if(!rows.length){alert("ยังไม่มีจำนวนสั่งซื้อ Makro");return}
-  const w=window.open("","_blank");
-  if(!w){alert("เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาตป๊อปอัป");return}
-  let body=rows.map((x,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(x.code||"")}</td><td>${escapeHtml(x.name)}</td><td>${x.buyQty} ${escapeHtml(x.unit)}</td><td>${escapeHtml(x.note||"-")}</td></tr>`).join("");
-  w.document.write(`<!DOCTYPE html><html lang="th"><meta charset="UTF-8"><title>ใบสั่งซื้อ Makro</title><style>body{font-family:Arial,sans-serif;padding:20px}h2{text-align:center}table{border-collapse:collapse;width:100%}th,td{border:1px solid #333;padding:8px;text-align:center}td:nth-child(3){text-align:left}</style><h2>ใบสั่งซื้อ Makro</h2><p>วันที่: ${escapeHtml(todayStr)} | ผู้สั่ง: ${escapeHtml(currentUser)}</p><table><thead><tr><th>ลำดับ</th><th>รหัส</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr></thead><tbody>${body}</tbody></table><script>window.onload=()=>window.print()<\/script></html>`);
-  w.document.close();
-}
-function generateMakroExcel(){exportOrderCsv()}
 
-function renderDailyStockTable(){
-  const body=document.getElementById("dailyTableBody");if(!body)return;
-  const key=document.getElementById("dailySearchInput").value.toLowerCase().trim();
-  const sup=document.getElementById("dailySupplierFilter").value;
-  const day=document.getElementById("dailyDayFilter").value;
-  const rows=inventory.map((item,index)=>({item,index})).filter(({item})=>
+function renderDaily(){
+  const key=document.getElementById("dailySearch").value.trim().toLowerCase();
+  const supplier=document.getElementById("dailySupplier").value;
+  const day=document.getElementById("dailyDay").value;
+  const filtered=inventory.filter(item=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
-    (sup==="all"||item.supplier===sup)&&(day==="all"||item.orderDay===day));
+    (supplier==="all"||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
+  );
+  const rows=paginate(filtered,"daily","dailyPages");
   const disabled=isToday()?"":"disabled";
-  body.innerHTML=groupRows(rows,9,({item,index})=>`<tr>
-    <td>${imageHtml(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
-    <td style="text-align:left;font-weight:bold">${escapeHtml(item.name)}</td>
-    <td>${escapeHtml(item.unit)}</td><td>${item.stock}</td>
-    <td><input class="small-input" type="number" min="0" step="any" id="buy_${index}" value="${safeNumber(item.buyQty)}" ${disabled}></td>
-    <td><input class="small-input" type="number" min="0" step="any" id="used_${index}" value="${safeNumber(item.usedToday)}" ${disabled}></td>
-    <td>${escapeHtml(item.note||"-")}</td>
-    <td><button class="btn btn-warning" ${disabled} onclick="clearDailyRow(${index})">เคลียร์</button></td></tr>`);
-  document.getElementById("saveBtn").disabled=!isToday()||saveInProgress;
+  document.getElementById("dailyBody").innerHTML=groupedRows(rows,8,({item,index})=>{
+    const draft=dailyDraft[index]||{received:0,used:0};
+    return `<tr><td>${imageCell(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
+      <td style="text-align:left;font-weight:bold">${escapeHtml(item.name)}</td>
+      <td>${escapeHtml(item.unit)}</td><td>${safeNumber(item.stock)}</td>
+      <td><input class="small-input" type="number" min="0" step="any" value="${draft.received}" ${disabled} onchange="setDailyDraft(${index},'received',this.value)"></td>
+      <td><input class="small-input" type="number" min="0" step="any" value="${draft.used}" ${disabled} onchange="setDailyDraft(${index},'used',this.value)"></td>
+      <td>${escapeHtml(item.note||"-")}</td></tr>`;
+  });
+  document.getElementById("saveDailyBtn").disabled=!isToday()||saveInProgress;
 }
-function clearDailyRow(index){
-  const buy=document.getElementById(`buy_${index}`);
-  const used=document.getElementById(`used_${index}`);
-  if(buy)buy.value=0;
-  if(used)used.value=0;
+function setDailyDraft(index,field,value){
+  if(!dailyDraft[index])dailyDraft[index]={received:0,used:0};
+  dailyDraft[index][field]=Math.max(0,Number.parseFloat(value)||0);
 }
 
-async function saveDailyData(){
-  const date=document.getElementById("recordDate").value;
-  const button=document.getElementById("saveBtn");
-  if(date!==todayStr){alert("บันทึกได้เฉพาะวันที่ปัจจุบัน");return}
-  if(saveInProgress)return;
+function renderManage(){
+  const key=document.getElementById("manageSearch").value.trim().toLowerCase();
+  const category=document.getElementById("manageCategory").value;
+  const supplier=document.getElementById("manageSupplier").value;
+  const filtered=inventory.filter(item=>
+    (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
+    (category==="all"||item.category===category)&&(supplier==="all"||item.supplier===supplier)
+  );
+  const rows=paginate(filtered,"manage","managePages");
+  const days=["ทุกวัน","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์","วันอาทิตย์"];
+  document.getElementById("manageBody").innerHTML=rows.length?rows.map(({item,index})=>`
+    <tr><td>${imageCell(item,index)}<br>
+      <label class="btn btn-blue" style="padding:3px 6px;font-size:.72rem">เพิ่ม/เปลี่ยนรูป
+        <input type="file" accept="image/*" hidden onchange="changeProductImage(${index},this)">
+      </label></td>
+      <td><input style="width:70px" value="${escapeHtml(item.code)}" onchange="updateProductField(${index},'code',this.value)"></td>
+      <td><input style="width:120px" value="${escapeHtml(item.name)}" onchange="updateProductField(${index},'name',this.value)"></td>
+      <td><select onchange="updateProductField(${index},'category',this.value)">${categories.map(v=>`<option value="${escapeHtml(v)}" ${v===item.category?"selected":""}>${escapeHtml(v)}</option>`).join("")}</select></td>
+      <td><select onchange="updateProductField(${index},'supplier',this.value)">${partners.map(v=>`<option value="${escapeHtml(v)}" ${v===item.supplier?"selected":""}>${escapeHtml(v)}</option>`).join("")}</select></td>
+      <td><select onchange="updateProductField(${index},'orderDay',this.value)">${days.map(v=>`<option value="${v}" ${v===item.orderDay?"selected":""}>${v}</option>`).join("")}</select></td>
+      <td><input style="width:60px" value="${escapeHtml(item.unit)}" onchange="updateProductField(${index},'unit',this.value)"></td>
+      <td><input class="small-input" type="number" min="0" step="any" value="${safeNumber(item.total7Days)}" onchange="updateProductField(${index},'total7Days',this.value)"></td>
+      <td><input class="small-input" type="number" min="0" step="any" value="${safeNumber(item.stock)}" onchange="updateProductField(${index},'stock',this.value)"></td>
+      <td><input style="width:100px" value="${escapeHtml(item.note)}" onchange="updateProductField(${index},'note',this.value)"></td>
+      <td><button class="btn btn-red" onclick="deleteProduct(${index})">ลบ</button></td></tr>`
+  ).join(""):'<tr><td colspan="11" class="note">ไม่พบสินค้า</td></tr>';
+}
 
-  saveInProgress=true;button.disabled=true;button.textContent="กำลังบันทึก...";
-  try{
-    const existing=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
-    if(existing.exists()){
-      alert("วันนี้มีประวัติบันทึกแล้ว ระบบป้องกันการบันทึกซ้ำเพื่อไม่ให้ตัดสต็อกซ้ำ");
+/* บีบอัดเป็น JPEG Blob ก่อนส่ง ลดเวลาอัปโหลดและขนาดไฟล์ */
+function compressImageFile(file){
+  return new Promise((resolve,reject)=>{
+    if(!file||!file.type.startsWith("image/")){
+      reject(new Error("กรุณาเลือกไฟล์รูปภาพ"));
       return;
     }
-
-    const loggedInventory=inventory.map((item,index)=>{
-      const buy=Math.max(0,Number.parseFloat(document.getElementById(`buy_${index}`)?.value)||0);
-      const used=Math.max(0,Number.parseFloat(document.getElementById(`used_${index}`)?.value)||0);
-      const stock=Math.max(0,Number((safeNumber(item.stock)+buy-used).toFixed(2)));
-      const total7Days=Number((safeNumber(item.total7Days)+used).toFixed(2));
-      return {...item,stock,total7Days,buyQty:buy,usedToday:used};
-    });
-
-    const log={
-      date,
-      updatedBy:currentUser||"ไม่ระบุชื่อ",
-      updatedAt:new Date().toISOString(),
-      inventory:loggedInventory
-    };
-    const updated=loggedInventory.map(item=>({...item,buyQty:0,usedToday:0}));
-    const updates={};
-
-    updated.forEach((item,index)=>{
-      updates[`${ROOT}/inventory/${index}/stock`]=item.stock;
-      updates[`${ROOT}/inventory/${index}/total7Days`]=item.total7Days;
-      updates[`${ROOT}/inventory/${index}/buyQty`]=0;
-      updates[`${ROOT}/inventory/${index}/usedToday`]=0;
-    });
-    updates[`${ROOT}/dailyLogs/${date}`]=log;
-
-    await db.ref().update(updates);
-    inventory=updated;
-    baseInventory=updated.map(item=>({...item}));
-    renderDailyStockTable();
-    renderDashboard();
-    renderOrderList();
-    alert(`บันทึกประจำวัน ${date} สำเร็จ และเคลียร์ช่องรับเข้า/เบิกใช้แล้ว`);
-  }catch(error){
-    console.error(error);
-    alert("บันทึกไม่สำเร็จ: "+error.message);
-  }finally{
-    saveInProgress=false;
-    button.disabled=!isToday();
-    button.textContent="💾 บันทึกรับของและตัดยอด";
-  }
-}
-
-function renderManageTable(){
-  const body=document.getElementById("manageTableBody");if(!body)return;
-  const key=document.getElementById("manageSearchInput").value.toLowerCase().trim();
-  const cat=document.getElementById("manageCategoryFilter").value;
-  const sup=document.getElementById("manageSupplierFilter").value;
-  const rows=inventory.map((item,index)=>({item,index})).filter(({item})=>
-    (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
-    (cat==="all"||item.category===cat)&&(sup==="all"||item.supplier===sup));
-  const days=["ทุกวัน","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์","วันอาทิตย์"];
-  body.innerHTML=rows.length?rows.map(({item,index})=>`<tr>
-    <td>${imageHtml(item,index)}<br><label class="btn btn-primary" style="padding:3px 6px;font-size:.7rem">เปลี่ยนรูป<input type="file" accept="image/*" hidden onchange="updateImage(${index},this)"></label></td>
-    <td><input style="width:65px" value="${escapeHtml(item.code)}" onchange="updateItemField(${index},'code',this.value)"></td>
-    <td><input style="width:120px" value="${escapeHtml(item.name)}" onchange="updateItemField(${index},'name',this.value)"></td>
-    <td><select onchange="updateItemField(${index},'category',this.value)">${categories.map(x=>`<option value="${escapeHtml(x)}" ${x===item.category?"selected":""}>${escapeHtml(x)}</option>`).join("")}</select></td>
-    <td><select onchange="updateItemField(${index},'supplier',this.value)">${partners.map(x=>`<option value="${escapeHtml(x)}" ${x===item.supplier?"selected":""}>${escapeHtml(x)}</option>`).join("")}</select></td>
-    <td><select onchange="updateItemField(${index},'orderDay',this.value)">${days.map(x=>`<option value="${x}" ${x===item.orderDay?"selected":""}>${x}</option>`).join("")}</select></td>
-    <td><input style="width:55px" value="${escapeHtml(item.unit)}" onchange="updateItemField(${index},'unit',this.value)"></td>
-    <td><input class="small-input" type="number" min="0" step="any" value="${item.total7Days}" onchange="updateItemField(${index},'total7Days',this.value)"></td>
-    <td><input class="small-input" type="number" min="0" step="any" value="${item.stock}" onchange="updateItemField(${index},'stock',this.value)"></td>
-    <td><input style="width:100px" value="${escapeHtml(item.note)}" onchange="updateItemField(${index},'note',this.value)"></td>
-    <td><button class="btn btn-danger" onclick="deleteItem(${index})">ลบ</button></td>
-  </tr>`).join(""):'<tr><td colspan="11" style="padding:20px">ไม่พบสินค้า</td></tr>';
-}
-
-async function updateItemField(index,field,value){
-  if(!isToday()){alert("ดูข้อมูลย้อนหลังได้อย่างเดียว");renderManageTable();return}
-  if(!inventory[index])return;
-  const numeric=["stock","total7Days"].includes(field);
-  const clean=numeric?Math.max(0,Number.parseFloat(value)||0):String(value).trim();
-  inventory[index][field]=clean;
-  baseInventory[index][field]=clean;
-  try{await db.ref(`${ROOT}/inventory/${index}/${field}`).set(clean)}
-  catch(e){alert("บันทึกข้อมูลไม่สำเร็จ: "+e.message)}
-}
-
-function compressImage(file){
-  return new Promise((resolve,reject)=>{
     const reader=new FileReader();
     reader.onerror=()=>reject(new Error("อ่านไฟล์รูปไม่สำเร็จ"));
     reader.onload=()=>{
-      const img=new Image();
-      img.onerror=()=>reject(new Error("เปิดไฟล์รูปไม่สำเร็จ"));
-      img.onload=()=>{
-        const max=700,scale=Math.min(1,max/Math.max(img.width,img.height));
+      const image=new Image();
+      image.onerror=()=>reject(new Error("เปิดไฟล์รูปไม่สำเร็จ"));
+      image.onload=()=>{
+        const maxSize=800;
+        const scale=Math.min(1,maxSize/Math.max(image.width,image.height));
         const canvas=document.createElement("canvas");
-        canvas.width=Math.max(1,Math.round(img.width*scale));
-        canvas.height=Math.max(1,Math.round(img.height*scale));
-        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
-        resolve(canvas.toDataURL("image/jpeg",.72));
+        canvas.width=Math.max(1,Math.round(image.width*scale));
+        canvas.height=Math.max(1,Math.round(image.height*scale));
+        const context=canvas.getContext("2d");
+        context.drawImage(image,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob=>{
+          if(blob)resolve(blob);
+          else reject(new Error("บีบอัดรูปไม่สำเร็จ"));
+        },"image/jpeg",0.75);
       };
-      img.src=reader.result;
+      image.src=reader.result;
     };
     reader.readAsDataURL(file);
   });
 }
-function safeFileName(value){
-  return String(value||"item").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,60)||"item";
+async function uploadProductImage(file,item,index){
+  await ensureFirebaseAuth();
+  const blob=await compressImageFile(file);
+  const code=safeFileName(item.code||`item-${index}`);
+  const path=`product-images/${code}-${Date.now()}.jpg`;
+  const snapshot=await storage.ref(path).put(blob,{contentType:"image/jpeg"});
+  return snapshot.ref.getDownloadURL();
 }
-async function uploadImageDataUrl(dataUrl,path){
-  const ref=storage.ref(path);
-  const result=await ref.putString(dataUrl,"data_url",{contentType:"image/jpeg"});
-  return result.ref.getDownloadURL();
-}
-async function updateImage(index,input){
-  if(!isToday()){alert("แก้ไขรูปย้อนหลังไม่ได้");input.value="";return}
-  if(!input.files||!input.files[0])return;
+async function changeProductImage(index,input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
+  if(!isToday()){
+    alert("แก้ไขรูปย้อนหลังไม่ได้");
+    input.value="";
+    return;
+  }
+  const item=inventory[index];
+  if(!item){
+    alert("ไม่พบรายการสินค้าที่ต้องการเพิ่มรูป");
+    input.value="";
+    return;
+  }
+
+  const label=input.closest("label");
+  const oldLabel=label?label.firstChild.textContent:"";
+  if(label)label.firstChild.textContent="กำลังอัปโหลด...";
+
   try{
-    const dataUrl=await compressImage(input.files[0]);
-    const filePath=`product-images/${safeFileName(inventory[index].code||"item")}-${Date.now()}.jpg`;
-    const url=await uploadImageDataUrl(dataUrl,filePath);
-    inventory[index].image=url;
-    baseInventory[index].image=url;
-    await db.ref(`${ROOT}/inventory/${index}/image`).set(url);
-    renderManageTable();
-    alert("อัปโหลดรูปไป Firebase Storage เรียบร้อย");
+    const imageUrl=await uploadProductImage(file,item,index);
+    await db.ref(`${ROOT}/inventory/${index}/image`).set(imageUrl);
+    inventory[index].image=imageUrl;
+    if(baseInventory[index])baseInventory[index].image=imageUrl;
+    renderManage();
+    alert("อัปโหลดรูปสินค้าเรียบร้อยแล้ว");
   }catch(error){
-    console.error(error);
+    console.error("อัปโหลดรูปไม่สำเร็จ:",error);
     alert("อัปโหลดรูปไม่สำเร็จ: "+error.message);
-  }finally{input.value=""}
+    if(label)label.firstChild.textContent=oldLabel;
+  }finally{
+    input.value="";
+  }
 }
 async function addItem(){
   if(!isToday()){alert("เพิ่มสินค้าได้เฉพาะวันที่ปัจจุบัน");return}
   const code=document.getElementById("newCode").value.trim();
   const name=document.getElementById("newName").value.trim();
-  const choice=document.getElementById("newCategory").value;
+  const categoryChoice=document.getElementById("newCategory").value;
   const supplier=document.getElementById("newSupplier").value;
   const orderDay=document.getElementById("newOrderDay").value;
   const unit=document.getElementById("newUnit").value.trim();
@@ -667,65 +620,93 @@ async function addItem(){
   const file=document.getElementById("newImage").files[0];
 
   if(!name||!unit||!Number.isFinite(stock)||stock<0){
-    alert("กรุณากรอกชื่อสินค้า หน่วย และสต็อกตั้งต้นให้ถูกต้อง");return;
+    alert("กรุณากรอกชื่อสินค้า หน่วย และสต็อกตั้งต้นให้ถูกต้อง");
+    return;
   }
 
   const button=document.querySelector('button[onclick="addItem()"]');
-  button.disabled=true;button.textContent="กำลังบันทึก...";
+  button.disabled=true;
+  button.textContent="กำลังบันทึก...";
+  let uploadedPath=null;
+
   try{
-    let image="";
+    let imageUrl="";
     if(file){
-      const dataUrl=await compressImage(file);
-      image=await uploadImageDataUrl(dataUrl,`product-images/${safeFileName(code||"item")}-${Date.now()}.jpg`);
+      await ensureFirebaseAuth();
+      const blob=await compressImageFile(file);
+      uploadedPath=`product-images/${safeFileName(code||"item")}-${Date.now()}.jpg`;
+      const upload=await storage.ref(uploadedPath).put(blob,{contentType:"image/jpeg"});
+      imageUrl=await upload.ref.getDownloadURL();
     }
+
     const item={
-      code,name,category:choice==="auto"?detectCategory(name):choice,
-      supplier,orderDay,unit,stock,buyQty:0,usedToday:0,total7Days:stock,note,image
+      code,name,
+      category:categoryChoice==="auto"?detectCategory(name):categoryChoice,
+      supplier,orderDay,unit,stock,buyQty:0,usedToday:0,total7Days:stock,note,image:imageUrl
     };
     baseInventory.push(item);
-    inventory=baseInventory.map(x=>({...x}));
     await db.ref(`${ROOT}/inventory`).set(baseInventory);
-    ["newCode","newName","newUnit","newStock","newNote","newImage"].forEach(id=>document.getElementById(id).value="");
+    inventory=baseInventory.map(x=>({...x}));
+
+    ["newCode","newName","newUnit","newStock","newNote","newImage"].forEach(id=>{
+      document.getElementById(id).value="";
+    });
     document.getElementById("newCategory").value="auto";
-    renderManageTable();
+    renderManage();
     alert("เพิ่มสินค้าเรียบร้อย");
   }catch(error){
     console.error(error);
-    alert("บันทึกสินค้าไม่สำเร็จ: "+error.message);
+    if(uploadedPath){
+      storage.ref(uploadedPath).delete().catch(()=>{});
+    }
+    alert("เพิ่มสินค้าไม่สำเร็จ: "+error.message);
   }finally{
-    button.disabled=false;button.textContent="บันทึกสินค้าใหม่";
+    button.disabled=false;
+    button.textContent="บันทึกสินค้า";
   }
 }
+
 async function migrateOldImages(){
-  if(!confirm("ย้ายรูป Base64 ของสินค้าไป Firebase Storage หรือไม่? ระบบจะเปลี่ยนเป็น URL หลังอัปโหลดสำเร็จ"))return;
-  const button=document.getElementById("migrateImagesBtn");
+  if(!confirm("ย้ายรูป Base64 ของสินค้าไป Firebase Storage หรือไม่? รูปในฐานข้อมูลจะเปลี่ยนเป็น URL หลังอัปโหลดสำเร็จ"))return;
+  const button=document.getElementById("migrateBtn");
   const status=document.getElementById("migrationStatus");
   button.disabled=true;
-  let moved=0,failed=0;
+  let success=0,failed=0;
+
   try{
-    const snap=await db.ref(`${ROOT}/inventory`).once("value");
-    const raw=snap.val();
+    await ensureFirebaseAuth();
+    const snapshot=await db.ref(`${ROOT}/inventory`).once("value");
+    const raw=snapshot.val();
     const items=Array.isArray(raw)?raw:Object.values(raw||{});
-    for(let i=0;i<items.length;i++){
-      const item=items[i];
+
+    for(let index=0;index<items.length;index++){
+      const item=items[index];
       if(!item||typeof item.image!=="string"||!item.image.startsWith("data:image/"))continue;
+
       try{
-        status.textContent=`กำลังย้ายรูป ${moved+failed+1}...`;
-        const path=`product-images/${safeFileName(item.code||"item")}-migrated-${Date.now()}-${i}.jpg`;
-        const url=await uploadImageDataUrl(item.image,path);
-        await db.ref(`${ROOT}/inventory/${i}/image`).set(url);
-        if(baseInventory[i])baseInventory[i].image=url;
-        if(inventory[i])inventory[i].image=url;
-        moved++;
+        status.textContent=`กำลังย้ายรูป ${success+failed+1}...`;
+        const response=await fetch(item.image);
+        const blob=await response.blob();
+        const code=safeFileName(item.code||`item-${index}`);
+        const path=`product-images/${code}-migrated-${Date.now()}-${index}.jpg`;
+        const upload=await storage.ref(path).put(blob,{contentType:blob.type||"image/jpeg"});
+        const url=await upload.ref.getDownloadURL();
+
+        await db.ref(`${ROOT}/inventory/${index}/image`).set(url);
+        if(baseInventory[index])baseInventory[index].image=url;
+        if(inventory[index])inventory[index].image=url;
+        success++;
       }catch(error){
-        console.error("ย้ายรูปไม่สำเร็จ แถว",i,error);
+        console.error(`ย้ายรูปแถว ${index} ไม่สำเร็จ`,error);
         failed++;
       }
     }
+
     renderActiveTab();
-    status.textContent=`เสร็จแล้ว: สำเร็จ ${moved} รูป${failed?`, ไม่สำเร็จ ${failed} รูป`:""}`;
-    alert(`ย้ายรูปเสร็จแล้ว\nสำเร็จ ${moved} รูป\nไม่สำเร็จ ${failed} รูป`);
+    status.textContent=`เสร็จแล้ว: สำเร็จ ${success} รูป, ไม่สำเร็จ ${failed} รูป`;
+    alert(`ย้ายรูปเสร็จแล้ว\nสำเร็จ ${success} รูป\nไม่สำเร็จ ${failed} รูป`);
   }catch(error){
+    console.error(error);
     status.textContent="ย้ายรูปไม่สำเร็จ: "+error.message;
     alert("ย้ายรูปไม่สำเร็จ: "+error.message);
   }finally{
@@ -733,37 +714,60 @@ async function migrateOldImages(){
   }
 }
 
-async function deleteItem(index){
+async function updateProductField(index,field,value){
+  if(!isToday()){alert("ดูข้อมูลย้อนหลังได้อย่างเดียว");renderManage();return}
+  if(!inventory[index])return;
+  const numeric=["stock","total7Days"].includes(field);
+  const clean=numeric?Math.max(0,Number.parseFloat(value)||0):String(value).trim();
+  inventory[index][field]=clean;
+  if(baseInventory[index])baseInventory[index][field]=clean;
+  try{await db.ref(`${ROOT}/inventory/${index}/${field}`).set(clean)}
+  catch(error){alert("บันทึกข้อมูลไม่สำเร็จ: "+error.message)}
+}
+async function deleteProduct(index){
   if(!isToday()){alert("ลบสินค้าได้เฉพาะวันที่ปัจจุบัน");return}
   if(!confirm(`ต้องการลบ "${inventory[index].name}" ใช่หรือไม่?`))return;
-  const old=baseInventory.map(x=>({...x}));
+  const previous=baseInventory.map(item=>({...item}));
   baseInventory.splice(index,1);
-  inventory=baseInventory.map(x=>({...x}));
+  inventory=baseInventory.map(item=>({...item}));
   try{
     await db.ref(`${ROOT}/inventory`).set(baseInventory);
     renderActiveTab();
-  }catch(e){
-    baseInventory=old;inventory=old.map(x=>({...x}));
-    alert("ลบไม่สำเร็จ: "+e.message);
+  }catch(error){
+    baseInventory=previous;
+    inventory=previous.map(item=>({...item}));
+    alert("ลบสินค้าไม่สำเร็จ: "+error.message);
   }
 }
+
+function detectCategory(name){
+  const text=String(name).toLowerCase();
+  if(["ผัก","เห็ด","กวางตุ้ง"].some(x=>text.includes(x)))return "ผัก";
+  if(["หมู","เนื้อ","ไก่","สามชั้น","กุ้ง"].some(x=>text.includes(x)))return "เนื้อสัตว์";
+  if(["เส้น","บะหมี่","วุ้นเส้น"].some(x=>text.includes(x)))return "เส้น";
+  if(text.includes("เต้าหู้"))return "เต้าหู้";
+  if(["เกี๊ยว","ลูกชิ้น","ปูอัด"].some(x=>text.includes(x)))return "อาหารแช่แข็ง";
+  if(["ซุป","น้ำจิ้ม","น้ำพริก"].some(x=>text.includes(x)))return "เครื่องปรุง/น้ำซุป";
+  return categories[0]||"อื่นๆ";
+}
 async function addPartner(){
-  const name=document.getElementById("newPartnerName").value.trim();
-  if(!name){alert("กรุณากรอกชื่อพาร์ทเนอร์");return}
-  if(partners.includes(name)){alert("มีพาร์ทเนอร์นี้แล้ว");return}
+  const name=document.getElementById("newPartner").value.trim();
+  if(!name){alert("กรุณากรอกชื่อแหล่งซื้อ");return}
+  if(partners.includes(name)){alert("มีแหล่งซื้อนี้แล้ว");return}
   partners.push(name);
   try{
     await db.ref(`${ROOT}/partners`).set(partners);
-    document.getElementById("newPartnerName").value="";
+    document.getElementById("newPartner").value="";
     updateDropdowns();
-  }catch(e){partners.pop();alert("เพิ่มพาร์ทเนอร์ไม่สำเร็จ: "+e.message)}
+  }catch(error){partners.pop();alert("เพิ่มไม่สำเร็จ: "+error.message)}
 }
 async function deletePartner(index){
-  if(partners.length<=1){alert("ต้องมีพาร์ทเนอร์อย่างน้อยหนึ่งราย");return}
-  if(!confirm(`ลบพาร์ทเนอร์ "${partners[index]}" ใช่หรือไม่?`))return;
-  const old=[...partners];partners.splice(index,1);
+  if(partners.length<=1){alert("ต้องมีแหล่งซื้ออย่างน้อยหนึ่งรายการ");return}
+  if(!confirm(`ลบแหล่งซื้อ "${partners[index]}" ใช่หรือไม่?`))return;
+  const old=[...partners];
+  partners.splice(index,1);
   try{await db.ref(`${ROOT}/partners`).set(partners);updateDropdowns()}
-  catch(e){partners=old;updateDropdowns();alert("ลบพาร์ทเนอร์ไม่สำเร็จ: "+e.message)}
+  catch(error){partners=old;updateDropdowns();alert("ลบไม่สำเร็จ: "+error.message)}
 }
 async function addCategory(){
   const name=document.getElementById("newCategoryName").value.trim();
@@ -774,50 +778,66 @@ async function addCategory(){
     await db.ref(`${ROOT}/categories`).set(categories);
     document.getElementById("newCategoryName").value="";
     updateDropdowns();
-  }catch(e){categories.pop();alert("เพิ่มหมวดหมู่ไม่สำเร็จ: "+e.message)}
+  }catch(error){categories.pop();alert("เพิ่มไม่สำเร็จ: "+error.message)}
 }
 
-async function handleDateChange(){
+async function changeDate(){
   const date=document.getElementById("recordDate").value;
-  const past=date!==todayStr;
-  document.getElementById("historyStatus").style.display=past?"inline":"none";
-  if(!past){
-    inventory=baseInventory.map(x=>({...x}));
+  const isPast=date!==todayStr;
+  document.getElementById("historyStatus").style.display=isPast?"inline":"none";
+
+  if(!isPast){
+    inventory=baseInventory.map(item=>({...item}));
+    dailyDraft={};
     renderActiveTab();
     return;
   }
   if(!date)return;
-  const overlay=document.getElementById("loadingOverlay");
-  overlay.style.display="flex";overlay.textContent="กำลังโหลดประวัติ...";
-  try{
-    const snap=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
-    const log=snap.val();
-    inventory=log&&log.inventory?normalizeItems(log.inventory):baseInventory.map(x=>({...x,buyQty:0,usedToday:0}));
-    renderActiveTab();
-  }catch(e){alert("โหลดประวัติไม่สำเร็จ: "+e.message)}
-  finally{overlay.style.display="none";overlay.textContent="กำลังโหลดข้อมูล..."}
-}
-document.getElementById("recordDate").addEventListener("change",handleDateChange);
 
-async function saveDailyData(){
+  const overlay=document.getElementById("loading");
+  overlay.style.display="flex";
+  overlay.textContent="กำลังโหลดประวัติ...";
+  try{
+    const snapshot=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
+    const log=snapshot.val();
+    inventory=log&&log.inventory
+      ? normalizeItems(log.inventory)
+      : baseInventory.map(item=>({...item,buyQty:0,usedToday:0}));
+    dailyDraft={};
+    renderActiveTab();
+  }catch(error){alert("โหลดประวัติไม่สำเร็จ: "+error.message)}
+  finally{
+    overlay.style.display="none";
+    overlay.textContent="กำลังโหลดข้อมูล...";
+  }
+}
+
+async function saveDaily(){
   const date=document.getElementById("recordDate").value;
-  const button=document.getElementById("saveBtn");
+  const button=document.getElementById("saveDailyBtn");
   if(date!==todayStr){alert("บันทึกได้เฉพาะวันที่ปัจจุบัน");return}
   if(saveInProgress)return;
-  saveInProgress=true;button.disabled=true;button.textContent="กำลังบันทึก...";
+
+  saveInProgress=true;
+  button.disabled=true;
+  button.textContent="กำลังบันทึก...";
+
   try{
     const existing=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
     if(existing.exists()){
       alert("วันนี้มีประวัติบันทึกแล้ว ระบบป้องกันการบันทึกซ้ำเพื่อไม่ให้ตัดสต็อกซ้ำ");
       return;
     }
+
     const loggedInventory=inventory.map((item,index)=>{
-      const buy=Math.max(0,Number.parseFloat(document.getElementById(`buy_${index}`)?.value)||0);
-      const used=Math.max(0,Number.parseFloat(document.getElementById(`used_${index}`)?.value)||0);
-      const stock=Math.max(0,Number((safeNumber(item.stock)+buy-used).toFixed(2)));
+      const draft=dailyDraft[index]||{received:0,used:0};
+      const received=Math.max(0,safeNumber(draft.received));
+      const used=Math.max(0,safeNumber(draft.used));
+      const stock=Math.max(0,Number((safeNumber(item.stock)+received-used).toFixed(2)));
       const total7Days=Number((safeNumber(item.total7Days)+used).toFixed(2));
-      return {...item,stock,total7Days,buyQty:buy,usedToday:used};
+      return {...item,stock,total7Days,buyQty:received,usedToday:used};
     });
+
     const log={
       date,
       updatedBy:currentUser||"ไม่ระบุชื่อ",
@@ -826,6 +846,7 @@ async function saveDailyData(){
     };
     const updated=loggedInventory.map(item=>({...item,buyQty:0,usedToday:0}));
     const updates={};
+
     updated.forEach((item,index)=>{
       updates[`${ROOT}/inventory/${index}/stock`]=item.stock;
       updates[`${ROOT}/inventory/${index}/total7Days`]=item.total7Days;
@@ -833,104 +854,120 @@ async function saveDailyData(){
       updates[`${ROOT}/inventory/${index}/usedToday`]=0;
     });
     updates[`${ROOT}/dailyLogs/${date}`]=log;
+
     await db.ref().update(updates);
     inventory=updated;
     baseInventory=updated.map(item=>({...item}));
-    renderDailyStockTable();
-    renderDashboard();
-    renderOrderList();
-    alert(`บันทึกประจำวัน ${date} สำเร็จ และเคลียร์ช่องรับเข้า/เบิกใช้แล้ว`);
+    dailyDraft={};
+    renderActiveTab();
+    alert(`บันทึกประจำวัน ${date} สำเร็จ และเคลียร์ช่องจำนวนแล้ว`);
   }catch(error){
     console.error(error);
     alert("บันทึกไม่สำเร็จ: "+error.message);
   }finally{
     saveInProgress=false;
     button.disabled=!isToday();
-    button.textContent="💾 บันทึกรับของและตัดยอด";
+    button.textContent="💾 บันทึกประจำวัน";
   }
+}
+
+async function copyOrder(){
+  const supplier=document.getElementById("orderSupplier").value;
+  const day=document.getElementById("orderDay").value;
+  const rows=inventory.filter(item=>
+    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0
+  );
+  if(!rows.length){alert("ยังไม่มีจำนวนสั่งซื้อ");return}
+
+  let text=`รายการสั่งซื้อ: ${supplier||"ทุกแหล่งซื้อ"}\nวันที่: ${document.getElementById("recordDate").value}\nผู้สั่ง: ${currentUser||"-"}\n`;
+  rows.forEach(item=>text+=`- ${item.code?item.code+" ":""}${item.name} ${item.buyQty} ${item.unit}\n`);
+
+  try{
+    if(navigator.clipboard&&location.protocol==="https:"){
+      await navigator.clipboard.writeText(text);
+    }else{
+      const area=document.createElement("textarea");
+      area.value=text;document.body.appendChild(area);area.select();
+      document.execCommand("copy");area.remove();
+    }
+    alert("คัดลอกรายการสั่งซื้อแล้ว");
+  }catch(error){alert("คัดลอกไม่สำเร็จ: "+error.message)}
 }
 
 function csvCell(value){return `"${String(value??"").replace(/"/g,'""')}"`}
 function downloadCsv(filename,rows){
-  const content="\uFEFF"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n");
-  const blob=new Blob([content],{type:"text/csv;charset=utf-8"});
-  const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download=filename;a.click();
+  const csv="\uFEFF"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n");
+  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;link.download=filename;link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
-function exportToExcel(){
-  const rows=[["รหัสสินค้า","ชื่อสินค้า","หมวดหมู่","แหล่งซื้อ","วันสั่งซื้อ","หน่วย","คงเหลือ","ยอดใช้สะสม","เฉลี่ยต่อวัน","หมายเหตุ","สถานะ"]];
-  inventory.forEach(x=>rows.push([x.code,x.name,x.category,x.supplier,x.orderDay,x.unit,x.stock,x.total7Days,(x.total7Days/7).toFixed(1),x.note,x.stock<=3?"สั่งเพิ่มด่วน":"ปกติ"]));
-  downloadCsv(`Malatang_Stock_${document.getElementById("recordDate").value}.csv`,rows);
+function exportStockCsv(){
+  const rows=[["รหัสสินค้า","ชื่อสินค้า","หมวดหมู่","แหล่งซื้อ","วันสั่งซื้อ","หน่วย","คงเหลือ","ยอดใช้ 7 วัน","เฉลี่ย/วัน","หมายเหตุ"]];
+  inventory.forEach(item=>rows.push([
+    item.code,item.name,item.category,item.supplier,item.orderDay,item.unit,
+    item.stock,item.total7Days,(item.total7Days/7).toFixed(1),item.note
+  ]));
+  downloadCsv(`Stock_${document.getElementById("recordDate").value}.csv`,rows);
 }
 function exportOrderCsv(){
-  const supplier=document.getElementById("orderPartnerSelect").value;
-  const day=document.getElementById("orderDaySelect").value;
-  const rows=[["รหัส","สินค้า","หมวดหมู่","จำนวน","หน่วย","หมายเหตุ"]];
-  inventory.filter(x=>x.supplier===supplier&&(day==="all"||x.orderDay===day)&&safeNumber(x.buyQty)>0)
-    .forEach(x=>rows.push([x.code,x.name,x.category,x.buyQty,x.unit,x.note]));
+  const supplier=document.getElementById("orderSupplier").value;
+  const day=document.getElementById("orderDay").value;
+  const rows=[["รหัสสินค้า","สินค้า","หมวดหมู่","จำนวน","หน่วย","หมายเหตุ"]];
+  inventory.filter(item=>
+    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0
+  ).forEach(item=>rows.push([item.code,item.name,item.category,item.buyQty,item.unit,item.note]));
   if(rows.length===1){alert("ไม่มีจำนวนสั่งซื้อ");return}
-  downloadCsv(`Order_${safeFileName(supplier)}_${todayStr}.csv`,rows);
+  downloadCsv(`Order_${safeFileName(supplier||"all")}_${todayStr}.csv`,rows);
 }
-function generateMakroExcel(){exportOrderCsv()}
-function downloadExcelTemplate(){
+function downloadTemplate(){
   downloadCsv("Malatang_Stock_Template.csv",[
-    ["รหัสสินค้า","ชื่อวัตถุดิบ","หมวดหมู่","แหล่งซื้อ","วันสั่งซื้อ","หน่วย","สต็อกตั้งต้น","หมายเหตุ"],
-    ["M01","เส้นหนุบจีน","เส้น","โกดังของเราเอง","วันจันทร์","ถุง",12,"แช่น้ำก่อนใช้"],
-    ["M02","สามชั้นสไลด์","เนื้อสัตว์","Makro","ทุกวัน","แพ็ค",15,"ช่องฟรีซ"]
+    ["รหัสสินค้า","ชื่อสินค้า","หมวดหมู่","แหล่งซื้อ","วันสั่งซื้อ","หน่วย","สต็อกตั้งต้น","หมายเหตุ"],
+    ["M01","เส้นหนุบจีน","เส้น","โกดังของเราเอง","วันจันทร์","ถุง",12,"แช่น้ำก่อนใช้"]
   ]);
 }
 function parseCsvLine(line){
   const result=[];let value="",quoted=false;
   for(let i=0;i<line.length;i++){
-    const c=line[i];
-    if(c==='"'&&line[i+1]==='"'&&quoted){value+='"';i++}
-    else if(c==='"')quoted=!quoted;
-    else if(c===","&&!quoted){result.push(value);value=""}
-    else value+=c;
+    const char=line[i];
+    if(char==='"'&&line[i+1]==='"'&&quoted){value+='"';i++}
+    else if(char==='"')quoted=!quoted;
+    else if(char===","&&!quoted){result.push(value);value=""}
+    else value+=char;
   }
   result.push(value);
-  return result.map(x=>x.trim());
+  return result.map(value=>value.trim());
 }
-async function importExcelData(input){
-  const file=input.files&&input.files[0];if(!file)return;
+async function importCsv(input){
+  const file=input.files&&input.files[0];
+  if(!file)return;
   if(!isToday()){alert("นำเข้าสินค้าได้เฉพาะวันที่ปัจจุบัน");input.value="";return}
+
   try{
     const text=(await file.text()).replace(/^\uFEFF/,"");
-    const lines=text.split(/\r?\n/).filter(x=>x.trim());
+    const lines=text.split(/\r?\n/).filter(line=>line.trim());
     let count=0;
+
     for(let i=1;i<lines.length;i++){
-      const c=parseCsvLine(lines[i]);if(!c[1])continue;
-      const stock=Math.max(0,Number.parseFloat(c[6])||0);
+      const col=parseCsvLine(lines[i]);
+      if(!col[1])continue;
+      const stock=Math.max(0,Number.parseFloat(col[6])||0);
       baseInventory.push({
-        code:c[0]||"",name:c[1],category:c[2]||detectCategory(c[1]),
-        supplier:c[3]||partners[0],orderDay:c[4]||"ทุกวัน",unit:c[5]||"หน่วย",
-        stock,buyQty:0,usedToday:0,total7Days:stock,note:c[7]||"",image:""
+        code:col[0]||"",name:col[1],category:col[2]||detectCategory(col[1]),
+        supplier:col[3]||partners[0],orderDay:col[4]||"ทุกวัน",unit:col[5]||"หน่วย",
+        stock,buyQty:0,usedToday:0,total7Days:stock,note:col[7]||"",image:""
       });
       count++;
     }
-    if(!count){alert("ไม่พบแถวสินค้าที่นำเข้าได้");return}
+
+    if(!count){alert("ไม่พบรายการที่นำเข้าได้");return}
     await db.ref(`${ROOT}/inventory`).set(baseInventory);
-    inventory=baseInventory.map(x=>({...x}));
-    updateDropdowns();renderActiveTab();
+    inventory=baseInventory.map(item=>({...item}));
+    renderActiveTab();
     alert(`นำเข้าสินค้า ${count} รายการเรียบร้อย`);
-  }catch(e){alert("นำเข้าไม่สำเร็จ: "+e.message)}
+  }catch(error){alert("นำเข้าไม่สำเร็จ: "+error.message)}
   finally{input.value=""}
-}
-async function resetDefaultData(){
-  if(!confirm("คำเตือน: การรีเซ็ตจะแทนที่รายการสินค้า หมวดหมู่ และพาร์ทเนอร์ปัจจุบัน ต้องการดำเนินการหรือไม่?"))return;
-  try{
-    await Promise.all([
-      db.ref(`${ROOT}/categories`).set(defaultCategories),
-      db.ref(`${ROOT}/partners`).set(defaultPartners),
-      db.ref(`${ROOT}/inventory`).set(defaultInventory)
-    ]);
-    categories=[...defaultCategories];partners=[...defaultPartners];
-    baseInventory=defaultInventory.map(x=>({...x}));
-    inventory=baseInventory.map(x=>({...x}));
-    updateDropdowns();renderActiveTab();
-    alert("รีเซ็ตข้อมูลเริ่มต้นเรียบร้อย");
-  }catch(e){alert("รีเซ็ตไม่สำเร็จ: "+e.message)}
 }
 </script>
 </body>
