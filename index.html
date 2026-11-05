@@ -148,7 +148,7 @@ th{background:#f1faee;color:#1d3557}
   <section id="daily" class="tab">
     <div class="card">
       <h3>📝 รับของเข้าจริงและบันทึกยอดใช้</h3>
-      <p class="note">หลังบันทึกสำเร็จ ระบบจะเคลียร์ช่องรับเข้าและเบิกใช้เป็น 0</p>
+      <p class="note">เลือกวันที่ย้อนหลังเพื่อดูข้อมูลเดิม จากนั้นกด “แก้ไขประวัติ” หากต้องการแก้ยอด</p>
       <div class="filters">
         <div class="filter-group"><label>ค้นหาสินค้าหรือรหัส</label><input id="dailySearch" oninput="scheduleRender('daily')" placeholder="พิมพ์ค้นหา"></div>
         <div class="filter-group"><label>แหล่งซื้อ</label><select id="dailySupplier" onchange="resetPageAndRender('daily')"></select></div>
@@ -159,7 +159,11 @@ th{background:#f1faee;color:#1d3557}
         <tbody id="dailyBody"></tbody>
       </table></div>
       <div id="dailyPages" class="pagination"></div>
-      <div class="actions"><button class="btn" id="saveDailyBtn" onclick="saveDaily()">💾 บันทึกประจำวัน</button></div>
+      <div class="actions">
+        <button class="btn btn-blue" id="editHistoryBtn" style="display:none" onclick="startHistoryEdit()">✏️ แก้ไขประวัติ</button>
+        <button class="btn btn-gray" id="cancelEditBtn" style="display:none" onclick="cancelHistoryEdit()">ยกเลิกแก้ไข</button>
+        <button class="btn" id="saveDailyBtn" onclick="saveDaily()">💾 บันทึกประจำวัน</button>
+      </div>
     </div>
   </section>
 
@@ -222,15 +226,15 @@ th{background:#f1faee;color:#1d3557}
 <script>
 "use strict";
 
-/* ใส่ค่า Firebase จริงจาก Project settings > Your apps */
-const firebaseConfig = {
-  apiKey: "AIzaSyDie7nCV9MK1KYfmnwJ7bToD-fQPTbMOug",
-  authDomain: "malatang-stock.firebaseapp.com",
-  databaseURL: "https://malatang-stock-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "malatang-stock",
-  storageBucket: "malatang-stock.firebasestorage.app",
-  messagingSenderId: "767469911960",
-  appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed",
+    // ⚠️ นำค่า Firebase Config ของคุณมาวางแทนที่ด้านล่างนี้
+    const firebaseConfig = {
+        apiKey: "AIzaSyDie7nCV9MK1KYfmnwJ7bToD-fQPTbMOug",
+        authDomain: "malatang-stock.firebaseapp.com",
+        databaseURL: "https://malatang-stock-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "malatang-stock",
+        storageBucket: "malatang-stock.firebasestorage.app",
+        messagingSenderId: "767469911960",
+        appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed",
 };
 
 firebase.initializeApp(firebaseConfig);
@@ -257,6 +261,8 @@ let activeTab="dashboard";
 let searchTimer=null;
 let saveInProgress=false;
 let dailyDraft={};
+let loadedDailyLog=null;
+let historyEditMode=false;
 const pageState={dashboard:1,orders:1,daily:1,manage:1};
 
 function localDateString(date=new Date()){
@@ -270,6 +276,7 @@ function escapeHtml(value){
   return String(value??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 }
 function safeNumber(value){const n=Number(value);return Number.isFinite(n)?n:0}
+function safeFileName(value){return String(value||"item").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,60)||"item"}
 function isToday(){return document.getElementById("recordDate").value===todayStr}
 function normalizeItems(data){
   const arr=Array.isArray(data)?data:Object.values(data||{});
@@ -281,27 +288,19 @@ function normalizeItems(data){
     note:item.note||"",image:item.image||""
   }));
 }
-function safeFileName(value){
-  return String(value||"item").replace(/[^a-zA-Z0-9_-]/g,"_").slice(0,60)||"item";
+function login(){
+  const name=document.getElementById("usernameInput").value.trim();
+  if(!name){alert("กรุณากรอกชื่อผู้ใช้งาน");return}
+  currentUser=name;localStorage.setItem("malatang_user",name);checkLogin();
 }
 function checkLogin(){
   document.getElementById("loginOverlay").style.display=currentUser?"none":"flex";
   document.getElementById("displayUser").textContent=currentUser||"-";
 }
-function login(){
-  const name=document.getElementById("usernameInput").value.trim();
-  if(!name){alert("กรุณากรอกชื่อผู้ใช้งาน");return}
-  currentUser=name;
-  localStorage.setItem("malatang_user",name);
-  checkLogin();
-}
 function logout(){
-  localStorage.removeItem("malatang_user");
-  currentUser="";
-  document.getElementById("usernameInput").value="";
-  checkLogin();
+  localStorage.removeItem("malatang_user");currentUser="";
+  document.getElementById("usernameInput").value="";checkLogin();
 }
-
 function ensureFirebaseAuth(){
   if(auth.currentUser)return Promise.resolve(auth.currentUser);
   return auth.signInAnonymously().then(result=>result.user);
@@ -321,8 +320,7 @@ function loadData(){
     if(!partnerSnap.exists())db.ref(`${ROOT}/partners`).set(partners);
     if(!invSnap.exists())db.ref(`${ROOT}/inventory`).set(baseInventory);
     inventory=baseInventory.map(item=>({...item}));
-    updateDropdowns();
-    renderActiveTab();
+    updateDropdowns();renderActiveTab();
     document.getElementById("loading").style.display="none";
     if(!isToday())changeDate();
   }).catch(error=>{
@@ -357,8 +355,7 @@ function updateDropdowns(){
   fillSelect("newCategory",categories);
   document.getElementById("newCategory").insertAdjacentHTML("afterbegin",'<option value="auto">🤖 แยกหมวดอัตโนมัติ</option>');
   document.getElementById("newCategory").value="auto";
-  fillSelect("newSupplier",partners);
-  fillSelect("newOrderDay",days);
+  fillSelect("newSupplier",partners);fillSelect("newOrderDay",days);
   fillSelect("dashSupplier",partners,"ทุกแหล่งซื้อ");
   fillSelect("dailySupplier",partners,"ทุกแหล่งซื้อ");
   fillSelect("orderSupplier",partners);
@@ -371,24 +368,22 @@ function updateDropdowns(){
     `<span class="chip">${escapeHtml(p)} ${partners.length>1?`<button class="btn btn-red" style="padding:2px 6px" onclick="deletePartner(${i})">×</button>`:""}</span>`
   ).join("");
 }
-
 function scheduleRender(tab){
-  clearTimeout(searchTimer);
-  pageState[tab]=1;
+  clearTimeout(searchTimer);pageState[tab]=1;
   searchTimer=setTimeout(()=>{if(activeTab===tab)renderActiveTab()},180);
 }
 function resetPageAndRender(tab){pageState[tab]=1;renderActiveTab()}
 function paginate(rows,tab,containerId){
-  const totalPages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
-  pageState[tab]=Math.min(Math.max(1,pageState[tab]||1),totalPages);
+  const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));
+  pageState[tab]=Math.min(Math.max(1,pageState[tab]||1),pages);
   const start=(pageState[tab]-1)*PAGE_SIZE;
   const container=document.getElementById(containerId);
   if(container){
     container.innerHTML=rows.length>PAGE_SIZE
-      ? `<button onclick="changePage('${tab}',${pageState[tab]-1})" ${pageState[tab]<=1?"disabled":""}>ก่อนหน้า</button><span>หน้า ${pageState[tab]} / ${totalPages} · ${rows.length} รายการ</span><button onclick="changePage('${tab}',${pageState[tab]+1})" ${pageState[tab]>=totalPages?"disabled":""}>ถัดไป</button>`
+      ? `<button onclick="changePage('${tab}',${pageState[tab]-1})" ${pageState[tab]<=1?"disabled":""}>ก่อนหน้า</button><span>หน้า ${pageState[tab]} / ${pages} · ${rows.length} รายการ</span><button onclick="changePage('${tab}',${pageState[tab]+1})" ${pageState[tab]>=pages?"disabled":""}>ถัดไป</button>`
       : `<span class="note">${rows.length} รายการ</span>`;
   }
-  return rows.slice(start,start+PAGE_SIZE).map((item,offset)=>({item,index:start+offset}));
+  return rows.slice(start,start+PAGE_SIZE);
 }
 function changePage(tab,page){pageState[tab]=page;renderActiveTab()}
 function groupedRows(rows,colspan,renderer){
@@ -427,7 +422,7 @@ function renderDashboard(){
   const key=document.getElementById("dashSearch").value.trim().toLowerCase();
   const supplier=document.getElementById("dashSupplier").value;
   const day=document.getElementById("dashDay").value;
-  const filtered=inventory.filter(item=>
+  const filtered=inventory.map((item,index)=>({item,index})).filter(({item})=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
     (supplier==="all"||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
   );
@@ -441,11 +436,12 @@ function renderDashboard(){
     <td>${(safeNumber(item.total7Days)/7).toFixed(1)}</td>
     <td>${escapeHtml(item.note||"-")}</td><td>${statusBadge(item)}</td></tr>`);
 }
-
 function renderOrders(){
   const supplier=document.getElementById("orderSupplier").value;
   const day=document.getElementById("orderDay").value;
-  const filtered=inventory.filter(item=>(!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day));
+  const filtered=inventory.map((item,index)=>({item,index})).filter(({item})=>
+    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
+  );
   const rows=paginate(filtered,"orders","orderPages");
   document.getElementById("orderBody").innerHTML=rows.length?rows.map(({item,index})=>`
     <tr><td>${imageCell(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
@@ -459,8 +455,7 @@ function renderOrders(){
 async function updateOrderQuantity(index,value){
   if(!isToday()){alert("แก้ไขรายการสั่งซื้อย้อนหลังไม่ได้");return}
   const qty=Math.max(0,Number.parseFloat(value)||0);
-  inventory[index].buyQty=qty;
-  baseInventory[index].buyQty=qty;
+  inventory[index].buyQty=qty;baseInventory[index].buyQty=qty;
   try{await db.ref(`${ROOT}/inventory/${index}/buyQty`).set(qty)}
   catch(error){alert("บันทึกจำนวนสั่งซื้อไม่สำเร็จ: "+error.message)}
 }
@@ -472,12 +467,11 @@ async function confirmOrderPlaced(){
     (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0
   ).map(row=>row.index);
   if(!indexes.length){alert("ไม่มีจำนวนสั่งซื้อให้เคลียร์");return}
-  if(!confirm("ยืนยันสั่งซื้อแล้วและเคลียร์จำนวนที่กรอกใช่หรือไม่?"))return;
+  if(!confirm("ยืนยันว่าสั่งซื้อแล้วและเคลียร์จำนวนที่กรอกใช่หรือไม่?"))return;
   try{
-    await Promise.all(indexes.map(index=>db.ref(`${ROOT}/inventory/${index}/buyQty`).set(0)));
-    indexes.forEach(index=>{inventory[index].buyQty=0;baseInventory[index].buyQty=0});
-    renderOrders();
-    alert("เคลียร์จำนวนสั่งซื้อเรียบร้อย");
+    await Promise.all(indexes.map(i=>db.ref(`${ROOT}/inventory/${i}/buyQty`).set(0)));
+    indexes.forEach(i=>{inventory[i].buyQty=0;baseInventory[i].buyQty=0});
+    renderOrders();alert("เคลียร์จำนวนสั่งซื้อเรียบร้อย");
   }catch(error){alert("เคลียร์จำนวนไม่สำเร็จ: "+error.message)}
 }
 
@@ -485,22 +479,30 @@ function renderDaily(){
   const key=document.getElementById("dailySearch").value.trim().toLowerCase();
   const supplier=document.getElementById("dailySupplier").value;
   const day=document.getElementById("dailyDay").value;
-  const filtered=inventory.filter(item=>
+  const filtered=inventory.map((item,index)=>({item,index})).filter(({item})=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
     (supplier==="all"||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
   );
   const rows=paginate(filtered,"daily","dailyPages");
-  const disabled=isToday()?"":"disabled";
+  const canEdit=isToday()||historyEditMode;
+
   document.getElementById("dailyBody").innerHTML=groupedRows(rows,8,({item,index})=>{
     const draft=dailyDraft[index]||{received:0,used:0};
-    return `<tr><td>${imageCell(item,index)}</td><td>${escapeHtml(item.code||"-")}</td>
+    const disabled=canEdit?"":"disabled";
+    return `<tr><td>${imageCell(item,index)}</td>
+      <td>${escapeHtml(item.code||"-")}</td>
       <td style="text-align:left;font-weight:bold">${escapeHtml(item.name)}</td>
       <td>${escapeHtml(item.unit)}</td><td>${safeNumber(item.stock)}</td>
       <td><input class="small-input" type="number" min="0" step="any" value="${draft.received}" ${disabled} onchange="setDailyDraft(${index},'received',this.value)"></td>
       <td><input class="small-input" type="number" min="0" step="any" value="${draft.used}" ${disabled} onchange="setDailyDraft(${index},'used',this.value)"></td>
       <td>${escapeHtml(item.note||"-")}</td></tr>`;
   });
-  document.getElementById("saveDailyBtn").disabled=!isToday()||saveInProgress;
+
+  const hasHistory=!isToday()&&!!loadedDailyLog;
+  document.getElementById("editHistoryBtn").style.display=hasHistory&&!historyEditMode?"inline-flex":"none";
+  document.getElementById("cancelEditBtn").style.display=historyEditMode?"inline-flex":"none";
+  document.getElementById("saveDailyBtn").disabled=(!isToday()&&!historyEditMode)||saveInProgress;
+  document.getElementById("saveDailyBtn").textContent=historyEditMode?"💾 บันทึกการแก้ไข":"💾 บันทึกประจำวัน";
 }
 function setDailyDraft(index,field,value){
   if(!dailyDraft[index])dailyDraft[index]={received:0,used:0};
@@ -511,7 +513,7 @@ function renderManage(){
   const key=document.getElementById("manageSearch").value.trim().toLowerCase();
   const category=document.getElementById("manageCategory").value;
   const supplier=document.getElementById("manageSupplier").value;
-  const filtered=inventory.filter(item=>
+  const filtered=inventory.map((item,index)=>({item,index})).filter(({item})=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
     (category==="all"||item.category===category)&&(supplier==="all"||item.supplier===supplier)
   );
@@ -535,32 +537,24 @@ function renderManage(){
   ).join(""):'<tr><td colspan="11" class="note">ไม่พบสินค้า</td></tr>';
 }
 
-/* บีบอัดเป็น JPEG Blob ก่อนส่ง ลดเวลาอัปโหลดและขนาดไฟล์ */
+/* Firebase Storage: บีบอัดภาพและอัปโหลดเป็น JPEG */
 function compressImageFile(file){
   return new Promise((resolve,reject)=>{
-    if(!file||!file.type.startsWith("image/")){
-      reject(new Error("กรุณาเลือกไฟล์รูปภาพ"));
-      return;
-    }
+    if(!file||!file.type.startsWith("image/")){reject(new Error("กรุณาเลือกไฟล์รูปภาพ"));return}
     const reader=new FileReader();
     reader.onerror=()=>reject(new Error("อ่านไฟล์รูปไม่สำเร็จ"));
     reader.onload=()=>{
-      const image=new Image();
-      image.onerror=()=>reject(new Error("เปิดไฟล์รูปไม่สำเร็จ"));
-      image.onload=()=>{
-        const maxSize=800;
-        const scale=Math.min(1,maxSize/Math.max(image.width,image.height));
+      const img=new Image();
+      img.onerror=()=>reject(new Error("เปิดไฟล์รูปไม่สำเร็จ"));
+      img.onload=()=>{
+        const max=800,scale=Math.min(1,max/Math.max(img.width,img.height));
         const canvas=document.createElement("canvas");
-        canvas.width=Math.max(1,Math.round(image.width*scale));
-        canvas.height=Math.max(1,Math.round(image.height*scale));
-        const context=canvas.getContext("2d");
-        context.drawImage(image,0,0,canvas.width,canvas.height);
-        canvas.toBlob(blob=>{
-          if(blob)resolve(blob);
-          else reject(new Error("บีบอัดรูปไม่สำเร็จ"));
-        },"image/jpeg",0.75);
+        canvas.width=Math.max(1,Math.round(img.width*scale));
+        canvas.height=Math.max(1,Math.round(img.height*scale));
+        canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);
+        canvas.toBlob(blob=>blob?resolve(blob):reject(new Error("บีบอัดรูปไม่สำเร็จ")),"image/jpeg",.75);
       };
-      image.src=reader.result;
+      img.src=reader.result;
     };
     reader.readAsDataURL(file);
   });
@@ -568,44 +562,26 @@ function compressImageFile(file){
 async function uploadProductImage(file,item,index){
   await ensureFirebaseAuth();
   const blob=await compressImageFile(file);
-  const code=safeFileName(item.code||`item-${index}`);
-  const path=`product-images/${code}-${Date.now()}.jpg`;
+  const path=`product-images/${safeFileName(item.code||`item-${index}`)}-${Date.now()}.jpg`;
   const snapshot=await storage.ref(path).put(blob,{contentType:"image/jpeg"});
   return snapshot.ref.getDownloadURL();
 }
 async function changeProductImage(index,input){
-  const file=input.files&&input.files[0];
-  if(!file)return;
-  if(!isToday()){
-    alert("แก้ไขรูปย้อนหลังไม่ได้");
-    input.value="";
-    return;
-  }
+  const file=input.files&&input.files[0];if(!file)return;
+  if(!isToday()){alert("แก้ไขรูปย้อนหลังไม่ได้");input.value="";return}
   const item=inventory[index];
-  if(!item){
-    alert("ไม่พบรายการสินค้าที่ต้องการเพิ่มรูป");
-    input.value="";
-    return;
-  }
-
-  const label=input.closest("label");
-  const oldLabel=label?label.firstChild.textContent:"";
-  if(label)label.firstChild.textContent="กำลังอัปโหลด...";
-
+  if(!item){alert("ไม่พบสินค้าที่ต้องการเพิ่มรูป");input.value="";return}
   try{
-    const imageUrl=await uploadProductImage(file,item,index);
-    await db.ref(`${ROOT}/inventory/${index}/image`).set(imageUrl);
-    inventory[index].image=imageUrl;
-    if(baseInventory[index])baseInventory[index].image=imageUrl;
+    const url=await uploadProductImage(file,item,index);
+    await db.ref(`${ROOT}/inventory/${index}/image`).set(url);
+    inventory[index].image=url;
+    if(baseInventory[index])baseInventory[index].image=url;
     renderManage();
-    alert("อัปโหลดรูปสินค้าเรียบร้อยแล้ว");
+    alert("อัปโหลดรูปเรียบร้อยแล้ว");
   }catch(error){
-    console.error("อัปโหลดรูปไม่สำเร็จ:",error);
+    console.error(error);
     alert("อัปโหลดรูปไม่สำเร็จ: "+error.message);
-    if(label)label.firstChild.textContent=oldLabel;
-  }finally{
-    input.value="";
-  }
+  }finally{input.value=""}
 }
 async function addItem(){
   if(!isToday()){alert("เพิ่มสินค้าได้เฉพาะวันที่ปัจจุบัน");return}
@@ -618,100 +594,64 @@ async function addItem(){
   const stock=Number.parseFloat(document.getElementById("newStock").value);
   const note=document.getElementById("newNote").value.trim();
   const file=document.getElementById("newImage").files[0];
-
-  if(!name||!unit||!Number.isFinite(stock)||stock<0){
-    alert("กรุณากรอกชื่อสินค้า หน่วย และสต็อกตั้งต้นให้ถูกต้อง");
-    return;
-  }
+  if(!name||!unit||!Number.isFinite(stock)||stock<0){alert("กรุณากรอกชื่อ หน่วย และสต็อกให้ถูกต้อง");return}
 
   const button=document.querySelector('button[onclick="addItem()"]');
-  button.disabled=true;
-  button.textContent="กำลังบันทึก...";
-  let uploadedPath=null;
-
+  button.disabled=true;button.textContent="กำลังบันทึก...";
   try{
-    let imageUrl="";
+    let image="";
     if(file){
       await ensureFirebaseAuth();
       const blob=await compressImageFile(file);
-      uploadedPath=`product-images/${safeFileName(code||"item")}-${Date.now()}.jpg`;
-      const upload=await storage.ref(uploadedPath).put(blob,{contentType:"image/jpeg"});
-      imageUrl=await upload.ref.getDownloadURL();
+      const path=`product-images/${safeFileName(code||"item")}-${Date.now()}.jpg`;
+      const upload=await storage.ref(path).put(blob,{contentType:"image/jpeg"});
+      image=await upload.ref.getDownloadURL();
     }
-
     const item={
-      code,name,
-      category:categoryChoice==="auto"?detectCategory(name):categoryChoice,
-      supplier,orderDay,unit,stock,buyQty:0,usedToday:0,total7Days:stock,note,image:imageUrl
+      code,name,category:categoryChoice==="auto"?detectCategory(name):categoryChoice,
+      supplier,orderDay,unit,stock,buyQty:0,usedToday:0,total7Days:stock,note,image
     };
     baseInventory.push(item);
     await db.ref(`${ROOT}/inventory`).set(baseInventory);
     inventory=baseInventory.map(x=>({...x}));
-
-    ["newCode","newName","newUnit","newStock","newNote","newImage"].forEach(id=>{
-      document.getElementById(id).value="";
-    });
+    ["newCode","newName","newUnit","newStock","newNote","newImage"].forEach(id=>document.getElementById(id).value="");
     document.getElementById("newCategory").value="auto";
-    renderManage();
-    alert("เพิ่มสินค้าเรียบร้อย");
+    renderManage();alert("เพิ่มสินค้าเรียบร้อย");
   }catch(error){
-    console.error(error);
-    if(uploadedPath){
-      storage.ref(uploadedPath).delete().catch(()=>{});
-    }
-    alert("เพิ่มสินค้าไม่สำเร็จ: "+error.message);
-  }finally{
-    button.disabled=false;
-    button.textContent="บันทึกสินค้า";
-  }
+    console.error(error);alert("เพิ่มสินค้าไม่สำเร็จ: "+error.message);
+  }finally{button.disabled=false;button.textContent="บันทึกสินค้า"}
 }
-
 async function migrateOldImages(){
-  if(!confirm("ย้ายรูป Base64 ของสินค้าไป Firebase Storage หรือไม่? รูปในฐานข้อมูลจะเปลี่ยนเป็น URL หลังอัปโหลดสำเร็จ"))return;
+  if(!confirm("ย้ายรูป Base64 ในรายการสินค้าไป Firebase Storage หรือไม่?"))return;
   const button=document.getElementById("migrateBtn");
   const status=document.getElementById("migrationStatus");
-  button.disabled=true;
-  let success=0,failed=0;
-
+  button.disabled=true;let success=0,failed=0;
   try{
     await ensureFirebaseAuth();
     const snapshot=await db.ref(`${ROOT}/inventory`).once("value");
-    const raw=snapshot.val();
-    const items=Array.isArray(raw)?raw:Object.values(raw||{});
-
+    const raw=snapshot.val(),items=Array.isArray(raw)?raw:Object.values(raw||{});
     for(let index=0;index<items.length;index++){
       const item=items[index];
       if(!item||typeof item.image!=="string"||!item.image.startsWith("data:image/"))continue;
-
       try{
         status.textContent=`กำลังย้ายรูป ${success+failed+1}...`;
-        const response=await fetch(item.image);
-        const blob=await response.blob();
-        const code=safeFileName(item.code||`item-${index}`);
-        const path=`product-images/${code}-migrated-${Date.now()}-${index}.jpg`;
+        const response=await fetch(item.image),blob=await response.blob();
+        const path=`product-images/${safeFileName(item.code||`item-${index}`)}-migrated-${Date.now()}-${index}.jpg`;
         const upload=await storage.ref(path).put(blob,{contentType:blob.type||"image/jpeg"});
         const url=await upload.ref.getDownloadURL();
-
         await db.ref(`${ROOT}/inventory/${index}/image`).set(url);
         if(baseInventory[index])baseInventory[index].image=url;
         if(inventory[index])inventory[index].image=url;
         success++;
-      }catch(error){
-        console.error(`ย้ายรูปแถว ${index} ไม่สำเร็จ`,error);
-        failed++;
-      }
+      }catch(error){console.error("ย้ายรูปไม่สำเร็จ",index,error);failed++}
     }
-
     renderActiveTab();
     status.textContent=`เสร็จแล้ว: สำเร็จ ${success} รูป, ไม่สำเร็จ ${failed} รูป`;
     alert(`ย้ายรูปเสร็จแล้ว\nสำเร็จ ${success} รูป\nไม่สำเร็จ ${failed} รูป`);
   }catch(error){
-    console.error(error);
     status.textContent="ย้ายรูปไม่สำเร็จ: "+error.message;
     alert("ย้ายรูปไม่สำเร็จ: "+error.message);
-  }finally{
-    button.disabled=false;
-  }
+  }finally{button.disabled=false}
 }
 
 async function updateProductField(index,field,value){
@@ -727,19 +667,11 @@ async function updateProductField(index,field,value){
 async function deleteProduct(index){
   if(!isToday()){alert("ลบสินค้าได้เฉพาะวันที่ปัจจุบัน");return}
   if(!confirm(`ต้องการลบ "${inventory[index].name}" ใช่หรือไม่?`))return;
-  const previous=baseInventory.map(item=>({...item}));
-  baseInventory.splice(index,1);
-  inventory=baseInventory.map(item=>({...item}));
-  try{
-    await db.ref(`${ROOT}/inventory`).set(baseInventory);
-    renderActiveTab();
-  }catch(error){
-    baseInventory=previous;
-    inventory=previous.map(item=>({...item}));
-    alert("ลบสินค้าไม่สำเร็จ: "+error.message);
-  }
+  const old=baseInventory.map(item=>({...item}));
+  baseInventory.splice(index,1);inventory=baseInventory.map(item=>({...item}));
+  try{await db.ref(`${ROOT}/inventory`).set(baseInventory);renderActiveTab()}
+  catch(error){baseInventory=old;inventory=old.map(item=>({...item}));alert("ลบไม่สำเร็จ: "+error.message)}
 }
-
 function detectCategory(name){
   const text=String(name).toLowerCase();
   if(["ผัก","เห็ด","กวางตุ้ง"].some(x=>text.includes(x)))return "ผัก";
@@ -755,17 +687,13 @@ async function addPartner(){
   if(!name){alert("กรุณากรอกชื่อแหล่งซื้อ");return}
   if(partners.includes(name)){alert("มีแหล่งซื้อนี้แล้ว");return}
   partners.push(name);
-  try{
-    await db.ref(`${ROOT}/partners`).set(partners);
-    document.getElementById("newPartner").value="";
-    updateDropdowns();
-  }catch(error){partners.pop();alert("เพิ่มไม่สำเร็จ: "+error.message)}
+  try{await db.ref(`${ROOT}/partners`).set(partners);document.getElementById("newPartner").value="";updateDropdowns()}
+  catch(error){partners.pop();alert("เพิ่มไม่สำเร็จ: "+error.message)}
 }
 async function deletePartner(index){
   if(partners.length<=1){alert("ต้องมีแหล่งซื้ออย่างน้อยหนึ่งรายการ");return}
   if(!confirm(`ลบแหล่งซื้อ "${partners[index]}" ใช่หรือไม่?`))return;
-  const old=[...partners];
-  partners.splice(index,1);
+  const old=[...partners];partners.splice(index,1);
   try{await db.ref(`${ROOT}/partners`).set(partners);updateDropdowns()}
   catch(error){partners=old;updateDropdowns();alert("ลบไม่สำเร็จ: "+error.message)}
 }
@@ -774,80 +702,108 @@ async function addCategory(){
   if(!name){alert("กรุณากรอกชื่อหมวดหมู่");return}
   if(categories.includes(name)){alert("มีหมวดหมู่นี้แล้ว");return}
   categories.push(name);
-  try{
-    await db.ref(`${ROOT}/categories`).set(categories);
-    document.getElementById("newCategoryName").value="";
-    updateDropdowns();
-  }catch(error){categories.pop();alert("เพิ่มไม่สำเร็จ: "+error.message)}
+  try{await db.ref(`${ROOT}/categories`).set(categories);document.getElementById("newCategoryName").value="";updateDropdowns()}
+  catch(error){categories.pop();alert("เพิ่มไม่สำเร็จ: "+error.message)}
 }
 
+function itemIdentity(item,index){
+  return item.code?`code:${item.code}`:`index:${index}`;
+}
+function matchCurrentIndex(logItem,logIndex){
+  if(logItem.code){
+    const found=baseInventory.findIndex(item=>item.code===logItem.code);
+    if(found>=0)return found;
+  }
+  return logIndex<baseInventory.length?logIndex:-1;
+}
 async function changeDate(){
   const date=document.getElementById("recordDate").value;
-  const isPast=date!==todayStr;
-  document.getElementById("historyStatus").style.display=isPast?"inline":"none";
+  const past=date!==todayStr;
+  historyEditMode=false;loadedDailyLog=null;dailyDraft={};
+  document.getElementById("historyStatus").style.display=past?"inline":"none";
 
-  if(!isPast){
+  if(!past){
     inventory=baseInventory.map(item=>({...item}));
-    dailyDraft={};
-    renderActiveTab();
-    return;
+    renderActiveTab();return;
   }
   if(!date)return;
 
   const overlay=document.getElementById("loading");
-  overlay.style.display="flex";
-  overlay.textContent="กำลังโหลดประวัติ...";
+  overlay.style.display="flex";overlay.textContent="กำลังโหลดประวัติ...";
   try{
     const snapshot=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
-    const log=snapshot.val();
-    inventory=log&&log.inventory
-      ? normalizeItems(log.inventory)
-      : baseInventory.map(item=>({...item,buyQty:0,usedToday:0}));
-    dailyDraft={};
+    loadedDailyLog=snapshot.val();
+    if(loadedDailyLog&&loadedDailyLog.inventory){
+      inventory=normalizeItems(loadedDailyLog.inventory);
+      inventory.forEach((item,index)=>{
+        dailyDraft[index]={received:safeNumber(item.buyQty),used:safeNumber(item.usedToday)};
+      });
+    }else{
+      inventory=baseInventory.map(item=>({...item}));
+    }
     renderActiveTab();
   }catch(error){alert("โหลดประวัติไม่สำเร็จ: "+error.message)}
-  finally{
-    overlay.style.display="none";
-    overlay.textContent="กำลังโหลดข้อมูล...";
+  finally{overlay.style.display="none";overlay.textContent="กำลังโหลดข้อมูล..."}
+}
+function startHistoryEdit(){
+  if(isToday()||!loadedDailyLog||!loadedDailyLog.inventory)return;
+  historyEditMode=true;dailyDraft={};
+  normalizeItems(loadedDailyLog.inventory).forEach((item,index)=>{
+    dailyDraft[index]={received:safeNumber(item.buyQty),used:safeNumber(item.usedToday)};
+  });
+  renderDaily();
+}
+function cancelHistoryEdit(){
+  historyEditMode=false;dailyDraft={};
+  if(loadedDailyLog&&loadedDailyLog.inventory){
+    normalizeItems(loadedDailyLog.inventory).forEach((item,index)=>{
+      dailyDraft[index]={received:safeNumber(item.buyQty),used:safeNumber(item.usedToday)};
+    });
   }
+  renderDaily();
 }
 
 async function saveDaily(){
   const date=document.getElementById("recordDate").value;
   const button=document.getElementById("saveDailyBtn");
-  if(date!==todayStr){alert("บันทึกได้เฉพาะวันที่ปัจจุบัน");return}
+  if(!isToday()&&!historyEditMode){alert("กดแก้ไขประวัติก่อนบันทึกข้อมูลย้อนหลัง");return}
   if(saveInProgress)return;
 
-  saveInProgress=true;
-  button.disabled=true;
-  button.textContent="กำลังบันทึก...";
-
+  saveInProgress=true;button.disabled=true;button.textContent="กำลังบันทึก...";
   try{
-    const existing=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
-    if(existing.exists()){
-      alert("วันนี้มีประวัติบันทึกแล้ว ระบบป้องกันการบันทึกซ้ำเพื่อไม่ให้ตัดสต็อกซ้ำ");
+    if(historyEditMode){
+      await saveHistoricalCorrection(date);
       return;
     }
 
-    const loggedInventory=inventory.map((item,index)=>{
+    const existing=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
+    if(existing.exists()){
+      alert("วันนี้มีประวัติบันทึกแล้ว ระบบป้องกันการตัดสต็อกซ้ำ");
+      return;
+    }
+
+    const logged=inventory.map((item,index)=>{
       const draft=dailyDraft[index]||{received:0,used:0};
       const received=Math.max(0,safeNumber(draft.received));
       const used=Math.max(0,safeNumber(draft.used));
-      const stock=Math.max(0,Number((safeNumber(item.stock)+received-used).toFixed(2)));
-      const total7Days=Number((safeNumber(item.total7Days)+used).toFixed(2));
-      return {...item,stock,total7Days,buyQty:received,usedToday:used};
+      return {
+        ...item,
+        stock:Math.max(0,Number((safeNumber(item.stock)+received-used).toFixed(2))),
+        total7Days:Number((safeNumber(item.total7Days)+used).toFixed(2)),
+        buyQty:received,
+        usedToday:used
+      };
     });
-
     const log={
       date,
       updatedBy:currentUser||"ไม่ระบุชื่อ",
       updatedAt:new Date().toISOString(),
-      inventory:loggedInventory
+      inventory:logged
     };
-    const updated=loggedInventory.map(item=>({...item,buyQty:0,usedToday:0}));
+    const current=logged.map(item=>({...item,buyQty:0,usedToday:0}));
     const updates={};
 
-    updated.forEach((item,index)=>{
+    current.forEach((item,index)=>{
       updates[`${ROOT}/inventory/${index}/stock`]=item.stock;
       updates[`${ROOT}/inventory/${index}/total7Days`]=item.total7Days;
       updates[`${ROOT}/inventory/${index}/buyQty`]=0;
@@ -856,39 +812,89 @@ async function saveDaily(){
     updates[`${ROOT}/dailyLogs/${date}`]=log;
 
     await db.ref().update(updates);
-    inventory=updated;
-    baseInventory=updated.map(item=>({...item}));
-    dailyDraft={};
-    renderActiveTab();
+    inventory=current;baseInventory=current.map(item=>({...item}));
+    dailyDraft={};renderActiveTab();
     alert(`บันทึกประจำวัน ${date} สำเร็จ และเคลียร์ช่องจำนวนแล้ว`);
   }catch(error){
-    console.error(error);
-    alert("บันทึกไม่สำเร็จ: "+error.message);
+    console.error(error);alert("บันทึกไม่สำเร็จ: "+error.message);
   }finally{
     saveInProgress=false;
-    button.disabled=!isToday();
-    button.textContent="💾 บันทึกประจำวัน";
+    button.disabled=(!isToday()&&!historyEditMode);
+    button.textContent=historyEditMode?"💾 บันทึกการแก้ไข":"💾 บันทึกประจำวัน";
   }
+}
+
+async function saveHistoricalCorrection(date){
+  if(!loadedDailyLog||!loadedDailyLog.inventory){
+    alert("ไม่พบประวัติของวันที่เลือก");return;
+  }
+  const oldItems=normalizeItems(loadedDailyLog.inventory);
+  const correctedLogItems=[];
+  const updates={};
+
+  oldItems.forEach((oldItem,logIndex)=>{
+    const draft=dailyDraft[logIndex]||{received:0,used:0};
+    const newReceived=Math.max(0,safeNumber(draft.received));
+    const newUsed=Math.max(0,safeNumber(draft.used));
+    const oldReceived=safeNumber(oldItem.buyQty);
+    const oldUsed=safeNumber(oldItem.usedToday);
+    const deltaStock=(newReceived-oldReceived)-(newUsed-oldUsed);
+    const deltaUsed=newUsed-oldUsed;
+
+    correctedLogItems.push({
+      ...oldItem,
+      stock:Math.max(0,Number((safeNumber(oldItem.stock)+deltaStock).toFixed(2))),
+      total7Days:Math.max(0,Number((safeNumber(oldItem.total7Days)+deltaUsed).toFixed(2))),
+      buyQty:newReceived,
+      usedToday:newUsed
+    });
+
+    const currentIndex=matchCurrentIndex(oldItem,logIndex);
+    if(currentIndex>=0){
+      const current=baseInventory[currentIndex];
+      const newStock=Math.max(0,Number((safeNumber(current.stock)+deltaStock).toFixed(2)));
+      const newTotal=Math.max(0,Number((safeNumber(current.total7Days)+deltaUsed).toFixed(2)));
+      updates[`${ROOT}/inventory/${currentIndex}/stock`]=newStock;
+      updates[`${ROOT}/inventory/${currentIndex}/total7Days`]=newTotal;
+      baseInventory[currentIndex]={...current,stock:newStock,total7Days:newTotal};
+    }
+  });
+
+  const correctedLog={
+    ...loadedDailyLog,
+    date,
+    updatedBy:currentUser||"ไม่ระบุชื่อ",
+    updatedAt:new Date().toISOString(),
+    inventory:correctedLogItems
+  };
+  updates[`${ROOT}/dailyLogs/${date}`]=correctedLog;
+
+  await db.ref().update(updates);
+  loadedDailyLog=correctedLog;
+  inventory=correctedLogItems.map(item=>({...item}));
+  historyEditMode=false;
+  dailyDraft={};
+  inventory.forEach((item,index)=>{
+    dailyDraft[index]={received:safeNumber(item.buyQty),used:safeNumber(item.usedToday)};
+  });
+  renderActiveTab();
+  alert(`แก้ไขประวัติวันที่ ${date} และปรับสต็อกปัจจุบันตามส่วนต่างแล้ว`);
 }
 
 async function copyOrder(){
   const supplier=document.getElementById("orderSupplier").value;
   const day=document.getElementById("orderDay").value;
-  const rows=inventory.filter(item=>
+  const items=inventory.filter(item=>
     (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0
   );
-  if(!rows.length){alert("ยังไม่มีจำนวนสั่งซื้อ");return}
-
+  if(!items.length){alert("ยังไม่มีจำนวนสั่งซื้อ");return}
   let text=`รายการสั่งซื้อ: ${supplier||"ทุกแหล่งซื้อ"}\nวันที่: ${document.getElementById("recordDate").value}\nผู้สั่ง: ${currentUser||"-"}\n`;
-  rows.forEach(item=>text+=`- ${item.code?item.code+" ":""}${item.name} ${item.buyQty} ${item.unit}\n`);
-
+  items.forEach(item=>text+=`- ${item.code?item.code+" ":""}${item.name} ${item.buyQty} ${item.unit}\n`);
   try{
-    if(navigator.clipboard&&location.protocol==="https:"){
-      await navigator.clipboard.writeText(text);
-    }else{
-      const area=document.createElement("textarea");
-      area.value=text;document.body.appendChild(area);area.select();
-      document.execCommand("copy");area.remove();
+    if(navigator.clipboard&&location.protocol==="https:")await navigator.clipboard.writeText(text);
+    else{
+      const area=document.createElement("textarea");area.value=text;document.body.appendChild(area);
+      area.select();document.execCommand("copy");area.remove();
     }
     alert("คัดลอกรายการสั่งซื้อแล้ว");
   }catch(error){alert("คัดลอกไม่สำเร็จ: "+error.message)}
@@ -897,27 +903,21 @@ async function copyOrder(){
 function csvCell(value){return `"${String(value??"").replace(/"/g,'""')}"`}
 function downloadCsv(filename,rows){
   const csv="\uFEFF"+rows.map(row=>row.map(csvCell).join(",")).join("\r\n");
-  const blob=new Blob([csv],{type:"text/csv;charset=utf-8"});
-  const url=URL.createObjectURL(blob);
-  const link=document.createElement("a");
-  link.href=url;link.download=filename;link.click();
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));
+  const link=document.createElement("a");link.href=url;link.download=filename;link.click();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function exportStockCsv(){
   const rows=[["รหัสสินค้า","ชื่อสินค้า","หมวดหมู่","แหล่งซื้อ","วันสั่งซื้อ","หน่วย","คงเหลือ","ยอดใช้ 7 วัน","เฉลี่ย/วัน","หมายเหตุ"]];
-  inventory.forEach(item=>rows.push([
-    item.code,item.name,item.category,item.supplier,item.orderDay,item.unit,
-    item.stock,item.total7Days,(item.total7Days/7).toFixed(1),item.note
-  ]));
+  inventory.forEach(item=>rows.push([item.code,item.name,item.category,item.supplier,item.orderDay,item.unit,item.stock,item.total7Days,(item.total7Days/7).toFixed(1),item.note]));
   downloadCsv(`Stock_${document.getElementById("recordDate").value}.csv`,rows);
 }
 function exportOrderCsv(){
   const supplier=document.getElementById("orderSupplier").value;
   const day=document.getElementById("orderDay").value;
   const rows=[["รหัสสินค้า","สินค้า","หมวดหมู่","จำนวน","หน่วย","หมายเหตุ"]];
-  inventory.filter(item=>
-    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0
-  ).forEach(item=>rows.push([item.code,item.name,item.category,item.buyQty,item.unit,item.note]));
+  inventory.filter(item=>(!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&safeNumber(item.buyQty)>0)
+    .forEach(item=>rows.push([item.code,item.name,item.category,item.buyQty,item.unit,item.note]));
   if(rows.length===1){alert("ไม่มีจำนวนสั่งซื้อ");return}
   downloadCsv(`Order_${safeFileName(supplier||"all")}_${todayStr}.csv`,rows);
 }
@@ -930,28 +930,23 @@ function downloadTemplate(){
 function parseCsvLine(line){
   const result=[];let value="",quoted=false;
   for(let i=0;i<line.length;i++){
-    const char=line[i];
-    if(char==='"'&&line[i+1]==='"'&&quoted){value+='"';i++}
-    else if(char==='"')quoted=!quoted;
-    else if(char===","&&!quoted){result.push(value);value=""}
-    else value+=char;
+    const c=line[i];
+    if(c==='"'&&line[i+1]==='"'&&quoted){value+='"';i++}
+    else if(c==='"')quoted=!quoted;
+    else if(c===","&&!quoted){result.push(value);value=""}
+    else value+=c;
   }
-  result.push(value);
-  return result.map(value=>value.trim());
+  result.push(value);return result.map(x=>x.trim());
 }
 async function importCsv(input){
-  const file=input.files&&input.files[0];
-  if(!file)return;
+  const file=input.files&&input.files[0];if(!file)return;
   if(!isToday()){alert("นำเข้าสินค้าได้เฉพาะวันที่ปัจจุบัน");input.value="";return}
-
   try{
     const text=(await file.text()).replace(/^\uFEFF/,"");
     const lines=text.split(/\r?\n/).filter(line=>line.trim());
     let count=0;
-
     for(let i=1;i<lines.length;i++){
-      const col=parseCsvLine(lines[i]);
-      if(!col[1])continue;
+      const col=parseCsvLine(lines[i]);if(!col[1])continue;
       const stock=Math.max(0,Number.parseFloat(col[6])||0);
       baseInventory.push({
         code:col[0]||"",name:col[1],category:col[2]||detectCategory(col[1]),
@@ -960,12 +955,10 @@ async function importCsv(input){
       });
       count++;
     }
-
     if(!count){alert("ไม่พบรายการที่นำเข้าได้");return}
     await db.ref(`${ROOT}/inventory`).set(baseInventory);
     inventory=baseInventory.map(item=>({...item}));
-    renderActiveTab();
-    alert(`นำเข้าสินค้า ${count} รายการเรียบร้อย`);
+    renderActiveTab();alert(`นำเข้าสินค้า ${count} รายการเรียบร้อย`);
   }catch(error){alert("นำเข้าไม่สำเร็จ: "+error.message)}
   finally{input.value=""}
 }
