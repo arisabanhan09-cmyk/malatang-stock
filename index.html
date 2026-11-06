@@ -4,21 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ระบบจัดการสต็อกร้านหม่าล่าทั่ง</title>
-
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
 <style>
 :root{--red:#e63946;--blue:#457b9d;--green:#2a9d8f;--line:#dee2e6}
 *{box-sizing:border-box}
 body{margin:0;padding:10px;background:#f8f9fa;color:#212529;font-family:"Segoe UI",Tahoma,sans-serif}
-.container{max-width:1400px;margin:auto;padding:15px;background:#fff;border-radius:14px;box-shadow:0 4px 18px #0000000d}
+.container{max-width:1400px;margin:auto;padding:15px;background:white;border-radius:14px;box-shadow:0 4px 18px #0000000d}
 .header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding-bottom:12px;margin-bottom:12px;border-bottom:2px solid var(--line)}
 h1{margin:0;color:var(--red);font-size:1.25rem}
 h3{margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #f1f1f1;color:var(--blue);font-size:1.05rem}
 input,select,button{font:inherit}
-input,select{width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;background:#fff}
+input,select{width:100%;padding:9px;border:1px solid var(--line);border-radius:7px;background:white}
 button{cursor:pointer}
 .user{display:flex;align-items:center;gap:7px;padding:7px 10px;background:#e9ecef;border-radius:20px}
 .user strong{color:var(--blue)}
@@ -26,9 +24,9 @@ button{cursor:pointer}
 .date-row input{width:auto}
 .tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:15px;padding-bottom:10px;border-bottom:2px solid var(--line)}
 .tab-btn{padding:9px 12px;border:0;border-radius:7px;background:#e9ecef;color:#495057;font-weight:bold}
-.tab-btn.active{background:var(--blue);color:#fff}
+.tab-btn.active{background:var(--blue);color:white}
 .tab{display:none}.tab.active{display:block}
-.card{padding:14px;margin-bottom:15px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.card{padding:14px;margin-bottom:15px;border:1px solid var(--line);border-radius:10px;background:white}
 .filters,.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:12px}
 .filters{padding:10px;border:1px solid var(--line);border-radius:8px;background:#f8f9fa}
 .filter-group{display:flex;flex-direction:column;gap:4px}
@@ -39,7 +37,7 @@ th,td{padding:8px 6px;text-align:center;border-bottom:1px solid var(--line);vert
 th{background:#f1faee;color:#1d3557}
 .category-row td{text-align:left;background:#e9ecef;font-weight:bold}
 .actions,.pagination{display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:8px;margin-top:12px}
-.btn{display:inline-flex;justify-content:center;align-items:center;padding:9px 12px;border:0;border-radius:7px;background:var(--green);color:#fff;font-weight:bold}
+.btn{display:inline-flex;justify-content:center;align-items:center;padding:9px 12px;border:0;border-radius:7px;background:var(--green);color:white;font-weight:bold}
 .btn-blue{background:var(--blue)}.btn-red{background:var(--red)}.btn-orange{background:#f39c12}.btn-gray{background:#6c757d}
 .btn:disabled{opacity:.55;cursor:not-allowed}
 .small-input{width:76px;text-align:center;padding:6px}
@@ -50,7 +48,7 @@ th{background:#f1faee;color:#1d3557}
 #loading,#loginOverlay,#imageModal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center}
 #loading{z-index:9999;background:#ffffffed;color:var(--blue);font-weight:bold}
 #loginOverlay{display:none;z-index:10000;padding:15px;background:#000b}
-.login-card,.modal-card{width:min(100%,400px);padding:22px;border-radius:12px;background:#fff;box-shadow:0 8px 30px #0004}
+.login-card,.modal-card{width:min(100%,400px);padding:22px;border-radius:12px;background:white;box-shadow:0 8px 30px #0004}
 .login-card{text-align:center}
 #imageModal{display:none;z-index:10001;padding:15px;background:#000c}
 .modal-card{position:relative;text-align:center}
@@ -60,8 +58,8 @@ th{background:#f1faee;color:#1d3557}
 @media(max-width:600px){body{padding:5px}.container{padding:10px}h1{font-size:1.05rem}.tab-btn{flex:1 1 40%;font-size:.8rem}.filters,.form-grid{grid-template-columns:1fr}}
 </style>
 </head>
-
 <body>
+
 <div id="loading">กำลังโหลดข้อมูล...</div>
 
 <div id="loginOverlay">
@@ -122,13 +120,13 @@ th{background:#f1faee;color:#1d3557}
 
   <section id="orders" class="tab">
     <div class="card">
-      <h3>🛒 เตรียมรายการสั่งซื้อ</h3>
+      <h3 id="orderTitle">🛒 เตรียมรายการสั่งซื้อ</h3>
       <div class="filters">
         <div class="filter-group"><label>แหล่งซื้อ</label><select id="orderSupplier" onchange="resetPage('orders')"></select></div>
         <div class="filter-group"><label>วันสั่งซื้อ</label><select id="orderDay" onchange="resetPage('orders')"></select></div>
       </div>
       <div class="table-wrap"><table>
-        <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>หน่วย</th><th>คงเหลือ</th><th>เฉลี่ย/วัน</th><th>สถานะ</th><th>จำนวนสั่ง</th></tr></thead>
+        <thead id="orderHead"></thead>
         <tbody id="orderBody"></tbody>
       </table></div>
       <div id="orderPages" class="pagination"></div>
@@ -235,23 +233,26 @@ firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 const ROOT="malatang_stock";
 const PAGE_SIZE=30;
-const categoriesDefault=["ผัก","เนื้อสัตว์","เส้น","เต้าหู้","อาหารแช่แข็ง","เครื่องปรุง/น้ำซุป"];
-const partnersDefault=["โกดังของเราเอง","มหาชัย","P&P","Makro"];
-const inventoryDefault=[
+
+const defaultCategories=["ผัก","เนื้อสัตว์","เส้น","เต้าหู้","อาหารแช่แข็ง","เครื่องปรุง/น้ำซุป"];
+const defaultPartners=["โกดังของเราเอง","มหาชัย","P&P","Makro"];
+const defaultInventory=[
   {code:"M01",name:"เส้นหนุบจีน",category:"เส้น",supplier:"โกดังของเราเอง",orderDay:"วันจันทร์",unit:"ถุง",stock:12,buyQty:0,usedToday:0,total7Days:28,note:"แช่น้ำก่อนใช้",image:""},
   {code:"M03",name:"สามชั้นสไลด์",category:"เนื้อสัตว์",supplier:"Makro",orderDay:"ทุกวัน",unit:"แพ็ค",stock:15,buyQty:0,usedToday:0,total7Days:52,note:"ช่องฟรีซตู้ล่าง",image:""},
   {code:"M05",name:"ผักบุ้ง",category:"ผัก",supplier:"มหาชัย",orderDay:"วันพฤหัสบดี",unit:"กก.",stock:5.5,buyQty:0,usedToday:0,total7Days:14.5,note:"รับของสดทุกเช้า",image:""}
 ];
 
-let categories=[...categoriesDefault],partners=[...partnersDefault];
+let categories=[...defaultCategories],partners=[...defaultPartners];
 let inventory=[],baseInventory=[];
 let currentUser=localStorage.getItem("malatang_user")||"";
 let activeTab="dashboard",searchTimer=null,saveInProgress=false;
 let dailyDraft={},loadedDailyLog=null,historyEditMode=false;
 const pageState={dashboard:1,orders:1,daily:1,manage:1};
-const todayStr=localDate(new Date());
 
-function localDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
+function localDate(d=new Date()){
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
+const todayStr=localDate();
 document.getElementById("recordDate").value=todayStr;
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
@@ -284,17 +285,17 @@ function logout(){
 async function loadData(){
   checkLogin();
   try{
-    const [c,p,i]=await Promise.all([
+    const [catSnap,partnerSnap,invSnap]=await Promise.all([
       db.ref(`${ROOT}/categories`).once("value"),
       db.ref(`${ROOT}/partners`).once("value"),
       db.ref(`${ROOT}/inventory`).once("value")
     ]);
-    categories=c.val()||[...categoriesDefault];
-    partners=p.val()||[...partnersDefault];
-    baseInventory=cleanItems(i.val()||inventoryDefault);
-    if(!c.exists())await db.ref(`${ROOT}/categories`).set(categories);
-    if(!p.exists())await db.ref(`${ROOT}/partners`).set(partners);
-    if(!i.exists())await db.ref(`${ROOT}/inventory`).set(baseInventory);
+    categories=catSnap.val()||[...defaultCategories];
+    partners=partnerSnap.val()||[...defaultPartners];
+    baseInventory=cleanItems(invSnap.val()||defaultInventory);
+    if(!catSnap.exists())await db.ref(`${ROOT}/categories`).set(categories);
+    if(!partnerSnap.exists())await db.ref(`${ROOT}/partners`).set(partners);
+    if(!invSnap.exists())await db.ref(`${ROOT}/inventory`).set(baseInventory);
     inventory=baseInventory.map(x=>({...x}));
     updateDropdowns();
     document.getElementById("loading").style.display="none";
@@ -361,7 +362,7 @@ function goPage(tab,page){pageState[tab]=page;renderActive()}
 function grouped(rows,span,fn){
   if(!rows.length)return `<tr><td colspan="${span}" class="note">ไม่พบสินค้า</td></tr>`;
   const groups=new Map();
-  rows.forEach(r=>{const c=r.item.category||"อื่นๆ";if(!groups.has(c))groups.set(c,[]);groups.get(c).push(r)});
+  rows.forEach(r=>{const cat=r.item.category||"อื่นๆ";if(!groups.has(cat))groups.set(cat,[]);groups.get(cat).push(r)});
   let out="";
   groups.forEach((items,cat)=>{
     out+=`<tr class="category-row"><td colspan="${span}">📁 ${esc(cat)}</td></tr>`;
@@ -370,24 +371,32 @@ function grouped(rows,span,fn){
   return out;
 }
 function imgCell(item,index){
-  return item.image?`<img class="item-img" loading="lazy" src="${esc(item.image)}" alt="รูปสินค้า" onclick="showImage(${index})">`:'<span class="note">ไม่มีรูป</span>';
+  return item.image
+    ? `<img class="item-img" loading="lazy" src="${esc(item.image)}" alt="รูปสินค้า" onclick="showImage(${index})">`
+    : '<span class="note">ไม่มีรูป</span>';
 }
 function showImage(index){
-  const x=inventory[index];if(!x)return;
-  document.getElementById("imageTitle").textContent=x.name;
-  document.getElementById("imagePreview").src=x.image||"";
-  document.getElementById("imageDetails").textContent=`${x.category} · ${x.supplier} · คงเหลือ ${x.stock} ${x.unit} · ${x.note||"-"}`;
+  const item=inventory[index];if(!item)return;
+  document.getElementById("imageTitle").textContent=item.name;
+  document.getElementById("imagePreview").src=item.image||"";
+  document.getElementById("imageDetails").textContent=`${item.category} · ${item.supplier} · คงเหลือ ${item.stock} ${item.unit} · ${item.note||"-"}`;
   document.getElementById("imageModal").style.display="flex";
 }
 function closeImage(){document.getElementById("imageModal").style.display="none"}
-function badge(x){return num(x.stock)<=3?'<span class="badge-low">สั่งเพิ่มด่วน</span>':'<span class="badge-ok">ปกติ</span>'}
+function badge(item){
+  return num(item.stock)<=3
+    ? '<span class="badge-low">สั่งเพิ่มด่วน</span>'
+    : '<span class="badge-ok">ปกติ</span>';
+}
 
 function renderDashboard(){
   const key=document.getElementById("dashSearch").value.trim().toLowerCase();
-  const sup=document.getElementById("dashSupplier").value,day=document.getElementById("dashDay").value;
+  const supplier=document.getElementById("dashSupplier").value;
+  const day=document.getElementById("dashDay").value;
   const list=inventory.map((item,index)=>({item,index})).filter(({item})=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
-    (sup==="all"||item.supplier===sup)&&(day==="all"||item.orderDay===day));
+    (supplier==="all"||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
+  );
   const rows=pageRows(list,"dashboard","dashPages");
   document.getElementById("dashBody").innerHTML=grouped(rows,12,({item,index})=>`
     <tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td>
@@ -401,30 +410,56 @@ function isMakroSupplier(value){return /makro|แม็คโคร/i.test(Strin
 function renderOrders(){
   const supplier=document.getElementById("orderSupplier").value;
   const day=document.getElementById("orderDay").value;
+  const makro=isMakroSupplier(supplier);
   const list=inventory.map((item,index)=>({item,index})).filter(({item})=>
-    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day));
+    (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
+  );
   const rows=pageRows(list,"orders","orderPages");
+  const head=document.getElementById("orderHead");
+  const body=document.getElementById("orderBody");
 
-  document.getElementById("orderBody").innerHTML=rows.length?rows.map(({item,index})=>`
+  document.getElementById("orderTitle").textContent=makro
+    ? "🛒 รายการสั่งซื้อ Makro"
+    : "🛒 เตรียมรายการสั่งซื้อ";
+  document.getElementById("makroPdfBtn").style.display=makro?"inline-flex":"none";
+
+  if(makro){
+    head.innerHTML="<tr><th>ลำดับ</th><th>รูป</th><th>สินค้า</th><th>จำนวนสั่ง</th><th>หมายเหตุ</th></tr>";
+    if(!rows.length){
+      body.innerHTML='<tr><td colspan="5" class="note">ไม่พบสินค้า Makro</td></tr>';
+      return;
+    }
+    const start=(pageState.orders-1)*PAGE_SIZE;
+    body.innerHTML=rows.map(({item,index},offset)=>`
+      <tr>
+        <td>${start+offset+1}</td>
+        <td>${imgCell(item,index)}</td>
+        <td style="text-align:left"><strong>${esc(item.name)}</strong>${item.code?`<br><small>${esc(item.code)}</small>`:""}<br><small>${esc(item.unit)}</small></td>
+        <td><input class="small-input" type="number" min="0" step="any" value="${num(item.buyQty)}" ${isToday()?"":"disabled"} onchange="updateOrderQty(${index},this.value)"></td>
+        <td>${esc(item.note||"-")}</td>
+      </tr>`).join("");
+    return;
+  }
+
+  head.innerHTML="<tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>หน่วย</th><th>คงเหลือ</th><th>เฉลี่ย/วัน</th><th>สถานะ</th><th>จำนวนสั่ง</th></tr>";
+  body.innerHTML=rows.length?rows.map(({item,index})=>`
     <tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td><td>${esc(item.name)}</td>
     <td>${esc(item.category)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td>
     <td>${(num(item.total7Days)/7).toFixed(1)}</td><td>${badge(item)}</td>
-    <td><input class="small-input" type="number" min="0" step="any" value="${num(item.buyQty)}"
-      ${isToday()?"":"disabled"} onchange="updateOrderQty(${index},this.value)"></td></tr>`
-  ).join(""):'<tr><td colspan="9">ไม่พบสินค้า</td></tr>';
-
-  document.getElementById("makroPdfBtn").style.display=isMakroSupplier(supplier)?"inline-flex":"none";
+    <td><input class="small-input" type="number" min="0" step="any" value="${num(item.buyQty)}" ${isToday()?"":"disabled"} onchange="updateOrderQty(${index},this.value)"></td></tr>
+  `).join(""):'<tr><td colspan="9" class="note">ไม่พบสินค้า</td></tr>';
 }
 async function updateOrderQty(index,value){
   if(!isToday()){alert("แก้รายการสั่งซื้อย้อนหลังไม่ได้");return}
-  const qty=Math.max(0,Number.parseFloat(value)||0);
-  inventory[index].buyQty=qty;baseInventory[index].buyQty=qty;
-  try{await db.ref(`${ROOT}/inventory/${index}/buyQty`).set(qty)}
+  const quantity=Math.max(0,Number.parseFloat(value)||0);
+  inventory[index].buyQty=quantity;baseInventory[index].buyQty=quantity;
+  try{await db.ref(`${ROOT}/inventory/${index}/buyQty`).set(quantity)}
   catch(e){alert("บันทึกไม่สำเร็จ: "+e.message)}
 }
 async function confirmOrderPlaced(){
   if(!isToday()){alert("ดูข้อมูลย้อนหลังได้อย่างเดียว");return}
-  const supplier=document.getElementById("orderSupplier").value,day=document.getElementById("orderDay").value;
+  const supplier=document.getElementById("orderSupplier").value;
+  const day=document.getElementById("orderDay").value;
   const indexes=inventory.map((item,index)=>({item,index})).filter(({item})=>
     (!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day)&&num(item.buyQty)>0
   ).map(x=>x.index);
@@ -441,25 +476,24 @@ async function downloadMakroPdf(){
   const supplier=document.getElementById("orderSupplier").value;
   const day=document.getElementById("orderDay").value;
   if(!isMakroSupplier(supplier)){alert("เลือกแหล่งซื้อ Makro ก่อน");return}
-  if(typeof html2pdf==="undefined"){alert("โหลดตัวสร้าง PDF ไม่สำเร็จ กรุณาตรวจอินเทอร์เน็ต");return}
+  if(typeof html2pdf==="undefined"){alert("โหลดระบบสร้าง PDF ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต");return}
 
-  const items=inventory.filter(x=>
-    x.supplier===supplier&&(day==="all"||x.orderDay===day)&&num(x.buyQty)>0
+  const items=inventory.filter(item=>
+    item.supplier===supplier&&(day==="all"||item.orderDay===day)&&num(item.buyQty)>0
   );
   if(!items.length){alert("กรุณากรอกจำนวนสั่งซื้อ Makro ก่อน");return}
 
   const button=document.getElementById("makroPdfBtn");
   button.disabled=true;button.textContent="กำลังสร้าง PDF...";
   const report=document.createElement("div");
-  report.style.cssText="position:fixed;left:-10000px;top:0;width:720px;background:#fff";
-
-  const rows=items.map((x,i)=>`
+  report.style.cssText="position:fixed;left:-10000px;top:0;width:720px;background:white";
+  const rows=items.map((item,index)=>`
     <tr>
-      <td>${i+1}</td>
-      <td>${x.image?`<img class="pdf-img" src="${esc(x.image)}" alt="รูปสินค้า">`:"ไม่มีรูป"}</td>
-      <td>${esc(x.name)}${x.code?`<br><small>${esc(x.code)}</small>`:""}</td>
-      <td>${esc(x.buyQty)} ${esc(x.unit)}</td>
-      <td>${esc(x.note||"")}</td>
+      <td>${index+1}</td>
+      <td>${item.image?`<img class="pdf-img" src="${esc(item.image)}" alt="รูปสินค้า">`:"ไม่มีรูป"}</td>
+      <td>${esc(item.name)}${item.code?`<br><small>${esc(item.code)}</small>`:""}</td>
+      <td>${esc(item.buyQty)} ${esc(item.unit)}</td>
+      <td>${esc(item.note||"")}</td>
     </tr>`).join("");
 
   report.innerHTML=`
@@ -496,7 +530,6 @@ async function downloadMakroPdf(){
     .pdf-sheet tr{break-inside:avoid;page-break-inside:avoid}
   `;
   document.head.appendChild(style);document.body.appendChild(report);
-
   try{
     await html2pdf().set({
       margin:8,
@@ -516,22 +549,22 @@ async function downloadMakroPdf(){
 
 function renderDaily(){
   const key=document.getElementById("dailySearch").value.trim().toLowerCase();
-  const sup=document.getElementById("dailySupplier").value,day=document.getElementById("dailyDay").value;
+  const supplier=document.getElementById("dailySupplier").value;
+  const day=document.getElementById("dailyDay").value;
   const list=inventory.map((item,index)=>({item,index})).filter(({item})=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
-    (sup==="all"||item.supplier===sup)&&(day==="all"||item.orderDay===day));
+    (supplier==="all"||item.supplier===supplier)&&(day==="all"||item.orderDay===day)
+  );
   const rows=pageRows(list,"daily","dailyPages");
   const canEdit=isToday()?(!loadedDailyLog||historyEditMode):historyEditMode;
-
   document.getElementById("dailyBody").innerHTML=grouped(rows,8,({item,index})=>{
-    const d=dailyDraft[index]||{received:0,used:0};
+    const draft=dailyDraft[index]||{received:0,used:0};
     return `<tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td>
       <td style="text-align:left">${esc(item.name)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td>
-      <td><input class="small-input" type="number" min="0" step="any" value="${d.received}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'received',this.value)"></td>
-      <td><input class="small-input" type="number" min="0" step="any" value="${d.used}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'used',this.value)"></td>
+      <td><input class="small-input" type="number" min="0" step="any" value="${draft.received}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'received',this.value)"></td>
+      <td><input class="small-input" type="number" min="0" step="any" value="${draft.used}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'used',this.value)"></td>
       <td>${esc(item.note||"-")}</td></tr>`;
   });
-
   const hasLog=!!(loadedDailyLog&&loadedDailyLog.inventory);
   document.getElementById("editHistoryBtn").style.display=hasLog&&!historyEditMode?"inline-flex":"none";
   document.getElementById("cancelEditBtn").style.display=historyEditMode?"inline-flex":"none";
@@ -550,12 +583,11 @@ function renderManage(){
   const supplier=document.getElementById("manageSupplier").value;
   const list=inventory.map((item,index)=>({item,index})).filter(({item})=>
     (!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&
-    (category==="all"||item.category===category)&&
-    (supplier==="all"||item.supplier===supplier));
+    (category==="all"||item.category===category)&&(supplier==="all"||item.supplier===supplier)
+  );
   const rows=pageRows(list,"manage","managePages");
   const days=["ทุกวัน","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์","วันอาทิตย์"];
   const disabled=isToday()?"":"disabled";
-
   document.getElementById("manageBody").innerHTML=grouped(rows,11,({item,index})=>`
     <tr>
       <td>${imgCell(item,index)}<br>
@@ -565,15 +597,9 @@ function renderManage(){
       </td>
       <td><input style="width:70px" value="${esc(item.code)}" ${disabled} onchange="updateField(${index},'code',this.value)"></td>
       <td><input style="width:120px" value="${esc(item.name)}" ${disabled} onchange="updateField(${index},'name',this.value)"></td>
-      <td><select ${disabled} onchange="updateField(${index},'category',this.value)">
-        ${categories.map(v=>`<option value="${esc(v)}" ${v===item.category?"selected":""}>${esc(v)}</option>`).join("")}
-      </select></td>
-      <td><select ${disabled} onchange="updateField(${index},'supplier',this.value)">
-        ${partners.map(v=>`<option value="${esc(v)}" ${v===item.supplier?"selected":""}>${esc(v)}</option>`).join("")}
-      </select></td>
-      <td><select ${disabled} onchange="updateField(${index},'orderDay',this.value)">
-        ${days.map(v=>`<option value="${v}" ${v===item.orderDay?"selected":""}>${v}</option>`).join("")}
-      </select></td>
+      <td><select ${disabled} onchange="updateField(${index},'category',this.value)">${categories.map(v=>`<option value="${esc(v)}" ${v===item.category?"selected":""}>${esc(v)}</option>`).join("")}</select></td>
+      <td><select ${disabled} onchange="updateField(${index},'supplier',this.value)">${partners.map(v=>`<option value="${esc(v)}" ${v===item.supplier?"selected":""}>${esc(v)}</option>`).join("")}</select></td>
+      <td><select ${disabled} onchange="updateField(${index},'orderDay',this.value)">${days.map(v=>`<option value="${v}" ${v===item.orderDay?"selected":""}>${v}</option>`).join("")}</select></td>
       <td><input style="width:60px" value="${esc(item.unit)}" ${disabled} onchange="updateField(${index},'unit',this.value)"></td>
       <td><input class="small-input" type="number" min="0" step="any" value="${num(item.total7Days)}" ${disabled} onchange="updateField(${index},'total7Days',this.value)"></td>
       <td><input class="small-input" type="number" min="0" step="any" value="${num(item.stock)}" ${disabled} onchange="updateField(${index},'stock',this.value)"></td>
@@ -595,7 +621,6 @@ async function changeDate(){
     inventory=date!==todayStr&&loadedDailyLog?.inventory
       ?cleanItems(loadedDailyLog.inventory)
       :baseInventory.map(x=>({...x}));
-
     if(loadedDailyLog?.inventory){
       cleanItems(loadedDailyLog.inventory).forEach((x,i)=>{
         dailyDraft[i]={received:num(x.buyQty),used:num(x.usedToday)};
@@ -635,7 +660,6 @@ async function saveDaily(){
   if(date!==todayStr&&!editing){alert("เลือกวันที่มีประวัติแล้วกดแก้ไขบันทึกก่อน");return}
   if(date===todayStr&&loadedDailyLog&&!editing){alert("วันนี้มีบันทึกแล้ว กดแก้ไขบันทึกก่อน");return}
   if(saveInProgress)return;
-
   saveInProgress=true;
   try{
     const snap=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
@@ -647,22 +671,15 @@ async function saveDaily(){
       if(oldLog)throw new Error("มีบันทึกวันนี้แล้ว กรุณากดแก้ไขบันทึก");
       await saveFirstRecord(date);
     }
-  }catch(e){
-    console.error(e);alert("บันทึกไม่สำเร็จ: "+e.message);
-  }finally{
-    saveInProgress=false;renderDaily();
-  }
+  }catch(e){console.error(e);alert("บันทึกไม่สำเร็จ: "+e.message)}
+  finally{saveInProgress=false;renderDaily()}
 }
 async function saveFirstRecord(date){
   const logged=baseInventory.map((item,index)=>{
     const d=dailyDraft[index]||{received:0,used:0};
     const received=Math.max(0,num(d.received)),used=Math.max(0,num(d.used));
-    return {
-      ...item,
-      stock:Math.max(0,Number((num(item.stock)+received-used).toFixed(2))),
-      total7Days:Number((num(item.total7Days)+used).toFixed(2)),
-      buyQty:received,usedToday:used
-    };
+    return {...item,stock:Math.max(0,Number((num(item.stock)+received-used).toFixed(2))),
+      total7Days:Number((num(item.total7Days)+used).toFixed(2)),buyQty:received,usedToday:used};
   });
   const updates={};
   logged.forEach((x,i)=>{
@@ -676,8 +693,7 @@ async function saveFirstRecord(date){
   await db.ref().update(updates);
   baseInventory=logged.map(x=>({...x,buyQty:0,usedToday:0}));
   inventory=baseInventory.map(x=>({...x}));
-  loadedDailyLog=log;historyEditMode=false;
-  dailyDraft={};
+  loadedDailyLog=log;historyEditMode=false;dailyDraft={};
   logged.forEach((x,i)=>dailyDraft[i]={received:num(x.buyQty),used:num(x.usedToday)});
   alert(`บันทึกวันที่ ${date} เรียบร้อย`);
 }
@@ -686,17 +702,13 @@ async function saveCorrection(date,oldLog){
   oldItems.forEach((oldItem,logIndex)=>{
     const d=dailyDraft[logIndex]||{received:0,used:0};
     const newReceived=Math.max(0,num(d.received)),newUsed=Math.max(0,num(d.used));
-    const oldReceived=num(oldItem.buyQty),oldUsed=num(oldItem.usedToday);
-    const stockDelta=(newReceived-oldReceived)-(newUsed-oldUsed);
-    const usedDelta=newUsed-oldUsed;
-
-    corrected.push({
-      ...oldItem,
+    const stockDelta=(newReceived-num(oldItem.buyQty))-(newUsed-num(oldItem.usedToday));
+    const usedDelta=newUsed-num(oldItem.usedToday);
+    corrected.push({...oldItem,
       stock:Math.max(0,Number((num(oldItem.stock)+stockDelta).toFixed(2))),
       total7Days:Math.max(0,Number((num(oldItem.total7Days)+usedDelta).toFixed(2))),
       buyQty:newReceived,usedToday:newUsed
     });
-
     const index=findCurrentIndex(oldItem,logIndex);
     if(index>=0){
       const current=baseInventory[index];
@@ -707,19 +719,16 @@ async function saveCorrection(date,oldLog){
       updates[`${ROOT}/inventory/${index}/total7Days`]=total7Days;
     }
   });
-
-  const newLog={...oldLog,date,updatedBy:currentUser||"ไม่ระบุชื่อ",updatedAt:new Date().toISOString(),inventory:corrected};
-  updates[`${ROOT}/dailyLogs/${date}`]=newLog;
+  const log={...oldLog,date,updatedBy:currentUser||"ไม่ระบุชื่อ",updatedAt:new Date().toISOString(),inventory:corrected};
+  updates[`${ROOT}/dailyLogs/${date}`]=log;
   await db.ref().update(updates);
-
-  loadedDailyLog=newLog;historyEditMode=false;
+  loadedDailyLog=log;historyEditMode=false;
   inventory=isToday()?baseInventory.map(x=>({...x})):corrected.map(x=>({...x}));
   dailyDraft={};
   corrected.forEach((x,i)=>dailyDraft[i]={received:num(x.buyQty),used:num(x.usedToday)});
   alert(`แก้ไขบันทึกวันที่ ${date} และปรับสต็อกตามส่วนต่างแล้ว`);
 }
 
-/* รูปย่อและบีบอัดก่อนเก็บใน Realtime Database */
 function compressImage(file){
   return new Promise((resolve,reject)=>{
     if(!file||!file.type.startsWith("image/")){reject(new Error("กรุณาเลือกไฟล์รูปภาพ"));return}
@@ -760,7 +769,6 @@ async function addItem(){
   const stock=Number.parseFloat(document.getElementById("newStock").value);
   const file=document.getElementById("newImage").files[0];
   if(!name||!unit||!Number.isFinite(stock)||stock<0){alert("กรอกชื่อ หน่วย และสต็อกให้ถูกต้อง");return}
-
   const button=document.querySelector('button[onclick="addItem()"]');
   button.disabled=true;button.textContent="กำลังบันทึก...";
   try{
@@ -829,11 +837,11 @@ async function addCategory(){
   catch(e){categories.pop();alert("เพิ่มไม่สำเร็จ: "+e.message)}
 }
 
-function csvCell(x){return `"${String(x??"").replace(/"/g,'""')}"`}
-function downloadCsv(name,rows){
+function csvCell(v){return `"${String(v??"").replace(/"/g,'""')}"`}
+function downloadCsv(filename,rows){
   const blob=new Blob(["\uFEFF"+rows.map(r=>r.map(csvCell).join(",")).join("\r\n")],{type:"text/csv;charset=utf-8"});
   const url=URL.createObjectURL(blob),a=document.createElement("a");
-  a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+  a.href=url;a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 function exportStockCsv(){
   const rows=[["รหัส","สินค้า","หมวดหมู่","แหล่งซื้อ","วันสั่ง","หน่วย","คงเหลือ","ยอดใช้ 7 วัน","หมายเหตุ"]];
@@ -856,8 +864,8 @@ async function copyOrder(){
   try{
     if(navigator.clipboard&&location.protocol==="https:")await navigator.clipboard.writeText(text);
     else{
-      const t=document.createElement("textarea");t.value=text;document.body.appendChild(t);
-      t.select();document.execCommand("copy");t.remove();
+      const area=document.createElement("textarea");area.value=text;document.body.appendChild(area);
+      area.select();document.execCommand("copy");area.remove();
     }
     alert("คัดลอกรายการแล้ว");
   }catch(e){alert("คัดลอกไม่สำเร็จ: "+e.message)}
