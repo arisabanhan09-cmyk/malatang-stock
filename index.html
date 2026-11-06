@@ -353,7 +353,7 @@ function getMakroOrderItems(){
 }
 function makroReportHtml(items){
   const rows=items.map((x,i)=>`<tr><td>${i+1}</td><td class="photo">${x.image?`<img src="${esc(x.image)}" alt="รูปสินค้า">`:"ไม่มีรูป"}</td><td>${esc(x.name)}${x.code?`<br><small>${esc(x.code)}</small>`:""}</td><td>${esc(x.buyQty)} ${esc(x.unit)}</td><td>${esc(x.note||"")}</td></tr>`).join("");
-  return `<div class="makro-sheet"><div class="brand">Holoyo</div><div class="store-name">ศูนย์อาหารโรงชาย KKU</div><table class="makro-table"><thead><tr><th>ลำดับ</th><th>รูปภาพ</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  return `<div class="makro-sheet"><div class="brand">Holoyo</div><div class="store-name">ศูนย์อาหารโรงชาย KKU(0807482261)</div><table class="makro-table"><thead><tr><th>ลำดับ</th><th>รูปภาพ</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 function addMakroReportStyles(){
   const s=document.createElement("style");
