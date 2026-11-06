@@ -417,7 +417,7 @@ async function downloadMakroExcel(){
     const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("ใบสั่งซื้อ Makro");
     ws.columns=[{width:10},{width:22},{width:34},{width:16},{width:24}];
     ws.mergeCells("A1:E1");ws.getCell("A1").value="Holoyo";ws.getCell("A1").alignment={horizontal:"center",vertical:"middle"};ws.getCell("A1").font={bold:true,size:14};ws.getRow(1).height=24;
-    ws.mergeCells("A2:E2");ws.getCell("A2").value="ศูนย์อาหารโรงชาย KKU";ws.getCell("A2").alignment={horizontal:"center",vertical:"middle"};ws.getCell("A2").font={bold:true,size:12};ws.getRow(2).height=22;
+    ws.mergeCells("A2:E2");ws.getCell("A2").value="ศูนย์อาหารโรงชาย KKU(0807482261)";ws.getCell("A2").alignment={horizontal:"center",vertical:"middle"};ws.getCell("A2").font={bold:true,size:12};ws.getRow(2).height=22;
     ["ลำดับ","รูปภาพ","สินค้า","จำนวน","หมายเหตุ"].forEach((v,i)=>{const c=ws.getRow(3).getCell(i+1);c.value=v;c.font={bold:true};c.alignment={horizontal:"center",vertical:"middle",wrapText:true};c.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFE8E8E8"}};c.border=borderThin()});
     ws.getRow(3).height=22;
     items.forEach((item,i)=>{
