@@ -472,81 +472,203 @@ async function confirmOrderPlaced(){
   }catch(e){alert("ทำรายการไม่สำเร็จ: "+e.message)}
 }
 
-async function downloadMakroPdf(){
-  const supplier=document.getElementById("orderSupplier").value;
-  const day=document.getElementById("orderDay").value;
-  if(!isMakroSupplier(supplier)){alert("เลือกแหล่งซื้อ Makro ก่อน");return}
-  if(typeof html2pdf==="undefined"){alert("โหลดระบบสร้าง PDF ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต");return}
+async function downloadMakroPdf() {
+  const supplier = document.getElementById("orderSupplier").value;
+  const day = document.getElementById("orderDay").value;
 
-  const items=inventory.filter(item=>
-    item.supplier===supplier&&(day==="all"||item.orderDay===day)&&num(item.buyQty)>0
+  if (!isMakroSupplier(supplier)) {
+    alert("กรุณาเลือกแหล่งซื้อ Makro ก่อน");
+    return;
+  }
+
+  if (typeof html2pdf === "undefined") {
+    alert("โหลดระบบสร้าง PDF ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต");
+    return;
+  }
+
+  const items = inventory.filter(item =>
+    item.supplier === supplier &&
+    (day === "all" || item.orderDay === day) &&
+    num(item.buyQty) > 0
   );
-  if(!items.length){alert("กรุณากรอกจำนวนสั่งซื้อ Makro ก่อน");return}
 
-  const button=document.getElementById("makroPdfBtn");
-  button.disabled=true;button.textContent="กำลังสร้าง PDF...";
-  const report=document.createElement("div");
-  report.style.cssText="position:fixed;left:-10000px;top:0;width:720px;background:white";
-  const rows=items.map((item,index)=>`
+  if (!items.length) {
+    alert("กรุณากรอกจำนวนสั่งซื้อ Makro ก่อน");
+    return;
+  }
+
+  const button = document.getElementById("makroPdfBtn");
+  const oldButtonText = button.textContent;
+  button.disabled = true;
+  button.textContent = "กำลังสร้าง PDF...";
+
+  const report = document.createElement("div");
+
+  // ต้องอยู่ในพื้นที่ที่มองเห็นได้ เพื่อให้ html2canvas จับภาพได้
+  report.style.cssText = [
+    "position:fixed",
+    "left:0",
+    "top:0",
+    "z-index:2147483647",
+    "width:794px",
+    "background:#fff",
+    "color:#000",
+    "padding:0",
+    "overflow:visible"
+  ].join(";");
+
+  const rows = items.map((item, index) => `
     <tr>
-      <td>${index+1}</td>
-      <td>${item.image?`<img class="pdf-img" src="${esc(item.image)}" alt="รูปสินค้า">`:"ไม่มีรูป"}</td>
-      <td>${esc(item.name)}${item.code?`<br><small>${esc(item.code)}</small>`:""}</td>
-      <td>${esc(item.buyQty)} ${esc(item.unit)}</td>
-      <td>${esc(item.note||"")}</td>
-    </tr>`).join("");
+      <td class="number">${index + 1}</td>
+      <td class="picture">
+        ${item.image
+          ? `<img src="${esc(item.image)}" alt="รูปสินค้า">`
+          : `<span>ไม่มีรูป</span>`}
+      </td>
+      <td class="product">${esc(item.name)}</td>
+      <td class="quantity">${esc(item.buyQty)} ${esc(item.unit)}</td>
+      <td class="remark">${esc(item.note || "")}</td>
+    </tr>
+  `).join("");
 
-  report.innerHTML=`
-    <div class="pdf-sheet">
-      <h1>ใบสั่งซื้อสินค้า Makro</h1>
-      <div class="pdf-meta">
-        <span>ร้าน: ร้านหม่าล่าทั่ง</span>
-        <span>วันที่: ${esc(document.getElementById("recordDate").value)}</span>
-        <span>ผู้สั่ง: ${esc(currentUser||"-")}</span>
+  report.innerHTML = `
+    <style>
+      .makro-sheet {
+        width: 794px;
+        padding: 22px;
+        background: #fff;
+        color: #000;
+        font-family: Arial, Tahoma, sans-serif;
+      }
+      .makro-heading {
+        border: 1px solid #111;
+        text-align: center;
+        padding: 7px;
+        font-size: 14px;
+      }
+      .makro-subheading {
+        border: 1px solid #111;
+        border-top: 0;
+        text-align: center;
+        padding: 7px;
+        font-size: 12px;
+      }
+      .makro-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        margin-top: 0;
+      }
+      .makro-table th,
+      .makro-table td {
+        border: 1px solid #111;
+        text-align: center;
+        vertical-align: middle;
+        padding: 5px;
+        white-space: normal;
+        overflow-wrap: anywhere;
+      }
+      .makro-table th {
+        height: 28px;
+        font-size: 11px;
+        font-weight: normal;
+      }
+      .makro-table td {
+        height: 115px;
+        font-size: 12px;
+      }
+      .makro-table th:nth-child(1),
+      .makro-table td:nth-child(1) { width: 13%; }
+      .makro-table th:nth-child(2),
+      .makro-table td:nth-child(2) { width: 24%; }
+      .makro-table th:nth-child(3),
+      .makro-table td:nth-child(3) { width: 34%; }
+      .makro-table th:nth-child(4),
+      .makro-table td:nth-child(4) { width: 13%; }
+      .makro-table th:nth-child(5),
+      .makro-table td:nth-child(5) { width: 16%; }
+      .makro-table .picture img {
+        display: block;
+        max-width: 105px;
+        max-height: 100px;
+        margin: auto;
+        object-fit: contain;
+      }
+      .makro-table .number,
+      .makro-table .quantity { white-space: nowrap; }
+      .makro-table tr {
+        page-break-inside: avoid;
+        break-inside: avoid;
+      }
+    </style>
+
+    <div class="makro-sheet">
+      <div class="makro-heading">Holyo</div>
+      <div class="makro-subheading">
+        ใบสั่งซื้อ Makro · วันที่ ${esc(document.getElementById("recordDate").value)}
       </div>
-      <table>
-        <thead><tr><th>ลำดับ</th><th>รูป</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr></thead>
+      <table class="makro-table">
+        <thead>
+          <tr>
+            <th>ลำดับ</th>
+            <th>รูป</th>
+            <th>สินค้า</th>
+            <th>จำนวน</th>
+            <th>หมายเหตุ</th>
+          </tr>
+        </thead>
         <tbody>${rows}</tbody>
       </table>
-      <p class="pdf-total">รวม ${items.length} รายการ</p>
-    </div>`;
-
-  const style=document.createElement("style");
-  style.textContent=`
-    .pdf-sheet{width:720px;padding:24px;background:#fff;color:#111;font-family:Arial,Tahoma,sans-serif}
-    .pdf-sheet h1{margin:0 0 14px;text-align:center;color:#111;font-size:22px}
-    .pdf-meta{display:flex;justify-content:space-between;gap:10px;margin-bottom:12px;font-size:12px}
-    .pdf-sheet table{width:100%;border-collapse:collapse;table-layout:fixed;white-space:normal}
-    .pdf-sheet th,.pdf-sheet td{border:1px solid #333;padding:7px;text-align:center;vertical-align:middle;overflow-wrap:anywhere}
-    .pdf-sheet th{background:#eee;font-size:12px}
-    .pdf-sheet td{height:90px;font-size:12px}
-    .pdf-sheet th:nth-child(1),.pdf-sheet td:nth-child(1){width:9%}
-    .pdf-sheet th:nth-child(2),.pdf-sheet td:nth-child(2){width:23%}
-    .pdf-sheet th:nth-child(3),.pdf-sheet td:nth-child(3){width:32%}
-    .pdf-sheet th:nth-child(4),.pdf-sheet td:nth-child(4){width:17%}
-    .pdf-sheet th:nth-child(5),.pdf-sheet td:nth-child(5){width:19%}
-    .pdf-img{max-width:90px;max-height:78px;object-fit:contain}
-    .pdf-total{text-align:right;font-size:12px}
-    .pdf-sheet tr{break-inside:avoid;page-break-inside:avoid}
+    </div>
   `;
-  document.head.appendChild(style);document.body.appendChild(report);
-  try{
-    await html2pdf().set({
-      margin:8,
-      filename:`Makro_Order_${document.getElementById("recordDate").value}.pdf`,
-      image:{type:"jpeg",quality:.95},
-      html2canvas:{scale:2,backgroundColor:"#ffffff"},
-      jsPDF:{unit:"mm",format:"a4",orientation:"portrait"},
-      pagebreak:{mode:["avoid-all","css","legacy"]}
-    }).from(report.querySelector(".pdf-sheet")).save();
-  }catch(e){
-    console.error(e);alert("สร้าง PDF ไม่สำเร็จ: "+e.message);
-  }finally{
-    report.remove();style.remove();button.disabled=false;
-    button.textContent="ดาวน์โหลดใบสั่งซื้อ Makro PDF";
+
+  document.body.appendChild(report);
+
+  try {
+    // รอให้ภาพสินค้าในรายงานโหลดก่อนแปลงเป็น PDF
+    const images = [...report.querySelectorAll("img")];
+    await Promise.all(images.map(img => {
+      if (img.complete && img.naturalWidth > 0) {
+        return Promise.resolve();
+      }
+      return new Promise(resolve => {
+        img.onload = resolve;
+        img.onerror = resolve;
+      });
+    }));
+
+    await html2pdf()
+      .set({
+        margin: 8,
+        filename: `Makro_Order_${document.getElementById("recordDate").value}.pdf`,
+        image: { type: "jpeg", quality: 0.95 },
+        html2canvas: {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          useCORS: true,
+          scrollX: 0,
+          scrollY: 0
+        },
+        jsPDF: {
+          unit: "mm",
+          format: "a4",
+          orientation: "portrait"
+        },
+        pagebreak: {
+          mode: ["css", "legacy"]
+        }
+      })
+      .from(report.querySelector(".makro-sheet"))
+      .save();
+  } catch (error) {
+    console.error("สร้าง PDF ไม่สำเร็จ:", error);
+    alert("สร้าง PDF ไม่สำเร็จ: " + error.message);
+  } finally {
+    report.remove();
+    button.disabled = false;
+    button.textContent = oldButtonText;
   }
 }
-
 function renderDaily(){
   const key=document.getElementById("dailySearch").value.trim().toLowerCase();
   const supplier=document.getElementById("dailySupplier").value;
