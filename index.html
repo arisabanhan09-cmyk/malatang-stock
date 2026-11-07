@@ -61,15 +61,21 @@ th{background:#f1faee;color:#1d3557}
 <body>
 
 <div id="loading">กำลังโหลดข้อมูล...</div>
-<div id="loginOverlay"><div class="login-card">
-  <h3>เข้าสู่ระบบ</h3><p class="note">กรอกชื่อผู้ใช้งานเพื่อบันทึกประวัติ</p>
-  <input id="usernameInput" placeholder="ชื่อของคุณ" onkeydown="if(event.key==='Enter')login()">
-  <button class="btn btn-blue" style="width:100%" onclick="login()">เข้าสู่ระบบ</button>
-</div></div>
-<div id="imageModal" onclick="closeImage()"><div class="modal-card" onclick="event.stopPropagation()">
-  <button class="modal-close" onclick="closeImage()">×</button><h3 id="imageTitle"></h3>
-  <img id="imagePreview" alt="รูปสินค้า"><p id="imageDetails" class="note"></p>
-</div></div>
+<div id="loginOverlay">
+  <div class="login-card">
+    <h3>เข้าสู่ระบบ</h3>
+    <p class="note">กรอกชื่อผู้ใช้งานเพื่อบันทึกประวัติ</p>
+    <input id="usernameInput" placeholder="ชื่อของคุณ" onkeydown="if(event.key==='Enter')login()">
+    <button class="btn btn-blue" style="width:100%" onclick="login()">เข้าสู่ระบบ</button>
+  </div>
+</div>
+<div id="imageModal" onclick="closeImage()">
+  <div class="modal-card" onclick="event.stopPropagation()">
+    <button class="modal-close" onclick="closeImage()">×</button>
+    <h3 id="imageTitle"></h3><img id="imagePreview" alt="รูปสินค้า">
+    <p id="imageDetails" class="note"></p>
+  </div>
+</div>
 
 <div class="container">
   <header class="header">
@@ -78,13 +84,11 @@ th{background:#f1faee;color:#1d3557}
       <button class="btn btn-gray" style="padding:5px 8px" onclick="logout()">เปลี่ยนชื่อ</button>
     </div>
   </header>
-
   <div class="date-row">
     <label for="recordDate">วันที่ทำรายการ:</label>
     <input id="recordDate" type="date" onchange="changeDate()">
     <span id="historyStatus" class="note" style="display:none;color:#e63946">กำลังดูข้อมูลย้อนหลัง</span>
   </div>
-
   <nav class="tabs">
     <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 แดชบอร์ด</button>
     <button class="tab-btn" onclick="switchTab('orders',this)">🛒 สั่งซื้อ</button>
@@ -92,75 +96,86 @@ th{background:#f1faee;color:#1d3557}
     <button class="tab-btn" onclick="switchTab('manage',this)">⚙️ จัดการสินค้า</button>
   </nav>
 
-  <section id="dashboard" class="tab active"><div class="card">
-    <h3>📊 แดชบอร์ดสินค้า</h3>
-    <div class="filters">
-      <div class="filter-group"><label>ค้นหา</label><input id="dashSearch" oninput="scheduleRender('dashboard')" placeholder="ชื่อหรือรหัส"></div>
-      <div class="filter-group"><label>แหล่งซื้อ</label><select id="dashSupplier" onchange="resetPage('dashboard')"></select></div>
-      <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dashDay" onchange="resetPage('dashboard')"></select></div>
+  <section id="dashboard" class="tab active">
+    <div class="card">
+      <h3>📊 แดชบอร์ดสินค้า</h3>
+      <div class="filters">
+        <div class="filter-group"><label>ค้นหา</label><input id="dashSearch" oninput="scheduleRender('dashboard')" placeholder="ชื่อหรือรหัส"></div>
+        <div class="filter-group"><label>แหล่งซื้อ</label><select id="dashSupplier" onchange="resetPage('dashboard')"></select></div>
+        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dashDay" onchange="resetPage('dashboard')"></select></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>แหล่งซื้อ</th><th>วันสั่ง</th><th>หน่วย</th><th>คงเหลือ</th><th>ใช้ 7 วัน</th><th>เฉลี่ย/วัน</th><th>หมายเหตุ</th><th>สถานะ</th></tr></thead>
+        <tbody id="dashBody"></tbody>
+      </table></div>
+      <div id="dashPages" class="pagination"></div>
+      <div class="actions"><button class="btn btn-orange" onclick="exportStockCsv()">ส่งออกสต็อก CSV</button></div>
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>แหล่งซื้อ</th><th>วันสั่ง</th><th>หน่วย</th><th>คงเหลือ</th><th>ใช้ 7 วัน</th><th>เฉลี่ย/วัน</th><th>หมายเหตุ</th><th>สถานะ</th></tr></thead>
-      <tbody id="dashBody"></tbody>
-    </table></div>
-    <div id="dashPages" class="pagination"></div>
-    <div class="actions"><button class="btn btn-orange" onclick="exportStockCsv()">ส่งออกสต็อก CSV</button></div>
-  </div></section>
+  </section>
 
-  <section id="orders" class="tab"><div class="card">
-    <h3 id="orderTitle">🛒 เตรียมรายการสั่งซื้อ</h3>
-    <div class="filters">
-      <div class="filter-group"><label>แหล่งซื้อ</label><select id="orderSupplier" onchange="resetPage('orders')"></select></div>
-      <div class="filter-group"><label>วันสั่งซื้อ</label><select id="orderDay" onchange="resetPage('orders')"></select></div>
+  <section id="orders" class="tab">
+    <div class="card">
+      <h3 id="orderTitle">🛒 เตรียมรายการสั่งซื้อ</h3>
+      <div class="filters">
+        <div class="filter-group"><label>แหล่งซื้อ</label><select id="orderSupplier" onchange="resetPage('orders')"></select></div>
+        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="orderDay" onchange="resetPage('orders')"></select></div>
+      </div>
+      <div class="table-wrap"><table><thead id="orderHead"></thead><tbody id="orderBody"></tbody></table></div>
+      <div id="orderPages" class="pagination"></div>
+      <div class="actions">
+        <button id="copyOrderBtn" class="btn btn-blue" onclick="copyOrder()">คัดลอกรายการส่ง LINE</button>
+        <button id="exportOrderCsvBtn" class="btn btn-orange" onclick="exportOrderCsv()">ส่งออกรายการ CSV</button>
+        <button id="makroPdfBtn" class="btn btn-blue" style="display:none" onclick="downloadMakroPdf()">📄 พิมพ์ / บันทึกใบสั่งซื้อ (PDF)</button>
+        <button id="makroExcelBtn" class="btn btn-green" style="display:none" onclick="downloadMakroExcel()">📊 ดาวน์โหลดใบสั่งซื้อ (Excel)</button>
+        <button class="btn btn-orange" onclick="confirmOrderPlaced()">ยืนยันสั่งแล้วและเคลียร์จำนวน</button>
+      </div>
     </div>
-    <div class="table-wrap"><table><thead id="orderHead"></thead><tbody id="orderBody"></tbody></table></div>
-    <div id="orderPages" class="pagination"></div>
-    <div class="actions">
-      <button id="copyOrderBtn" class="btn btn-blue" onclick="copyOrder()">คัดลอกรายการส่ง LINE</button>
-      <button id="exportOrderCsvBtn" class="btn btn-orange" onclick="exportOrderCsv()">ส่งออกรายการ CSV</button>
-      <button id="makroPdfBtn" class="btn btn-blue" style="display:none" onclick="downloadMakroPdf()">📄 พิมพ์ / บันทึกใบสั่งซื้อ (PDF)</button>
-      <button id="makroExcelBtn" class="btn btn-green" style="display:none" onclick="downloadMakroExcel()">📊 ดาวน์โหลดใบสั่งซื้อ (Excel)</button>
-      <button class="btn btn-orange" onclick="confirmOrderPlaced()">ยืนยันสั่งแล้วและเคลียร์จำนวน</button>
-    </div>
-  </div></section>
+  </section>
 
-  <section id="daily" class="tab"><div class="card">
-    <h3>📝 รับของเข้าจริงและบันทึกยอดใช้</h3>
-    <p class="note">เลือกวันที่เพื่อดูบันทึกเดิม หากแก้ยอดที่บันทึกแล้ว ระบบจะปรับสต็อกตามส่วนต่าง</p>
-    <div class="filters">
-      <div class="filter-group"><label>ค้นหา</label><input id="dailySearch" oninput="scheduleRender('daily')" placeholder="ชื่อหรือรหัส"></div>
-      <div class="filter-group"><label>แหล่งซื้อ</label><select id="dailySupplier" onchange="resetPage('daily')"></select></div>
-      <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dailyDay" onchange="resetPage('daily')"></select></div>
+  <section id="daily" class="tab">
+    <div class="card">
+      <h3>📝 รับของเข้าจริงและบันทึกยอดใช้</h3>
+      <p class="note">เลือกวันที่เพื่อดูบันทึกเดิม หากแก้ยอดที่บันทึกแล้ว ระบบจะปรับสต็อกตามส่วนต่าง</p>
+      <div class="filters">
+        <div class="filter-group"><label>ค้นหา</label><input id="dailySearch" oninput="scheduleRender('daily')" placeholder="ชื่อหรือรหัส"></div>
+        <div class="filter-group"><label>แหล่งซื้อ</label><select id="dailySupplier" onchange="resetPage('daily')"></select></div>
+        <div class="filter-group"><label>วันสั่งซื้อ</label><select id="dailyDay" onchange="resetPage('daily')"></select></div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หน่วย</th><th>คงเหลือ</th><th>รับเข้า</th><th>เบิกใช้</th><th>หมายเหตุ</th></tr></thead>
+        <tbody id="dailyBody"></tbody>
+      </table></div>
+      <div id="dailyPages" class="pagination"></div>
+      <div class="actions">
+        <button id="editHistoryBtn" class="btn btn-blue" style="display:none" onclick="startHistoryEdit()">✏️ แก้ไขบันทึก</button>
+        <button id="cancelEditBtn" class="btn btn-gray" style="display:none" onclick="cancelEdit()">ยกเลิกแก้ไข</button>
+        <button id="saveDailyBtn" class="btn" onclick="saveDaily()">💾 บันทึกประจำวัน</button>
+      </div>
     </div>
-    <div class="table-wrap"><table>
-      <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หน่วย</th><th>คงเหลือ</th><th>รับเข้า</th><th>เบิกใช้</th><th>หมายเหตุ</th></tr></thead>
-      <tbody id="dailyBody"></tbody>
-    </table></div>
-    <div id="dailyPages" class="pagination"></div>
-    <div class="actions">
-      <button id="editHistoryBtn" class="btn btn-blue" style="display:none" onclick="startHistoryEdit()">✏️ แก้ไขบันทึก</button>
-      <button id="cancelEditBtn" class="btn btn-gray" style="display:none" onclick="cancelEdit()">ยกเลิกแก้ไข</button>
-      <button id="saveDailyBtn" class="btn" onclick="saveDaily()">💾 บันทึกประจำวัน</button>
-    </div>
-  </div></section>
+  </section>
 
   <section id="manage" class="tab">
-    <div class="card"><h3>🤝 แหล่งซื้อและหมวดหมู่</h3>
+    <div class="card">
+      <h3>🤝 แหล่งซื้อและหมวดหมู่</h3>
       <div class="form-grid">
         <input id="newPartner" placeholder="ชื่อแหล่งซื้อใหม่"><button class="btn btn-blue" onclick="addPartner()">เพิ่มแหล่งซื้อ</button>
         <input id="newCategoryName" placeholder="ชื่อหมวดหมู่ใหม่"><button class="btn btn-blue" onclick="addCategory()">เพิ่มหมวดหมู่</button>
-      </div><div id="partnerList"></div>
+      </div>
+      <div id="partnerList"></div>
     </div>
-    <div class="card"><h3>📦 เพิ่มสินค้า</h3>
+    <div class="card">
+      <h3>📦 เพิ่มสินค้า</h3>
       <div class="form-grid">
         <input id="newCode" placeholder="รหัสสินค้า"><input id="newName" placeholder="ชื่อสินค้า *">
         <select id="newCategory"></select><select id="newSupplier"></select><select id="newOrderDay"></select>
         <input id="newUnit" placeholder="หน่วย *"><input id="newStock" type="number" min="0" step="any" placeholder="สต็อกตั้งต้น *">
         <input id="newNote" placeholder="หมายเหตุ"><input id="newImage" type="file" accept="image/*">
         <button class="btn" onclick="addItem()">บันทึกสินค้า</button>
-      </div><p class="note">รูปจะถูกย่อและบีบอัดก่อนเก็บใน Realtime Database</p>
+      </div>
+      <p class="note">รูปจะถูกย่อและบีบอัดก่อนเก็บใน Realtime Database</p>
     </div>
-    <div class="card"><h3>⚙️ จัดการสินค้า</h3>
+    <div class="card">
+      <h3>⚙️ จัดการสินค้า</h3>
       <div class="filters">
         <div class="filter-group"><label>ค้นหา</label><input id="manageSearch" oninput="scheduleRender('manage')" placeholder="ชื่อหรือรหัส"></div>
         <div class="filter-group"><label>หมวดหมู่</label><select id="manageCategory" onchange="resetPage('manage')"></select></div>
@@ -169,11 +184,15 @@ th{background:#f1faee;color:#1d3557}
       <div class="table-wrap"><table>
         <thead><tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>แหล่งซื้อ</th><th>วันสั่ง</th><th>หน่วย</th><th>ยอดใช้ 7 วัน</th><th>คงเหลือ</th><th>หมายเหตุ</th><th>ลบ</th></tr></thead>
         <tbody id="manageBody"></tbody>
-      </table></div><div id="managePages" class="pagination"></div>
+      </table></div>
+      <div id="managePages" class="pagination"></div>
     </div>
-    <div class="card"><h3>📥 นำเข้า CSV</h3>
-      <div class="form-grid"><button class="btn btn-blue" onclick="downloadTemplate()">ดาวน์โหลดแบบฟอร์ม CSV</button>
-        <input id="importFile" type="file" accept=".csv,text/csv" onchange="importCsv(this)"></div>
+    <div class="card">
+      <h3>📥 นำเข้า CSV</h3>
+      <div class="form-grid">
+        <button class="btn btn-blue" onclick="downloadTemplate()">ดาวน์โหลดแบบฟอร์ม CSV</button>
+        <input id="importFile" type="file" accept=".csv,text/csv" onchange="importCsv(this)">
+      </div>
       <p class="note">หัวตาราง: รหัสสินค้า, ชื่อสินค้า, หมวดหมู่, แหล่งซื้อ, วันสั่งซื้อ, หน่วย, สต็อกตั้งต้น, หมายเหตุ</p>
     </div>
   </section>
@@ -206,15 +225,15 @@ let currentUser=localStorage.getItem("malatang_user")||"",activeTab="dashboard",
 let dailyDraft={},loadedDailyLog=null,historyEditMode=false;
 const pageState={dashboard:1,orders:1,daily:1,manage:1};
 function localDate(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
-const todayStr=localDate();document.getElementById("recordDate").value=todayStr;
+const todayStr=localDate();
+document.getElementById("recordDate").value=todayStr;
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
 function num(v){const n=Number(v);return Number.isFinite(n)?n:0}
 function isToday(){return document.getElementById("recordDate").value===todayStr}
-function cleanItems(data){return (Array.isArray(data)?data:Object.values(data||{})).filter(Boolean).map(x=>({
-  code:x.code||"",name:x.name||"",category:x.category||"อื่นๆ",supplier:x.supplier||partners[0]||"",
-  orderDay:x.orderDay||"ทุกวัน",unit:x.unit||"หน่วย",stock:num(x.stock),buyQty:num(x.buyQty),
-  usedToday:num(x.usedToday),total7Days:num(x.total7Days??x.stock),note:x.note||"",image:x.image||""
-}))}
+function cleanItems(data){
+  const list=Array.isArray(data)?data:Object.values(data||{});
+  return list.filter(Boolean).map(x=>({code:x.code||"",name:x.name||"",category:x.category||"อื่นๆ",supplier:x.supplier||partners[0]||"",orderDay:x.orderDay||"ทุกวัน",unit:x.unit||"หน่วย",stock:num(x.stock),buyQty:num(x.buyQty),usedToday:num(x.usedToday),total7Days:num(x.total7Days??x.stock),note:x.note||"",image:x.image||""}));
+}
 function checkLogin(){document.getElementById("loginOverlay").style.display=currentUser?"none":"flex";document.getElementById("displayUser").textContent=currentUser||"-"}
 function login(){const n=document.getElementById("usernameInput").value.trim();if(!n){alert("กรุณากรอกชื่อผู้ใช้งาน");return}currentUser=n;localStorage.setItem("malatang_user",n);checkLogin()}
 function logout(){localStorage.removeItem("malatang_user");currentUser="";document.getElementById("usernameInput").value="";checkLogin()}
@@ -233,7 +252,7 @@ async function loadData(){
 }
 loadData();
 
-function switchTab(id,button){activeTab=id;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.id===id));document.querySelectorAll(".tab-btn").forEach(x=>x.classList.toggle("active",x===button));renderActive()}
+function switchTab(id,btn){activeTab=id;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.id===id));document.querySelectorAll(".tab-btn").forEach(x=>x.classList.toggle("active",x===btn));renderActive()}
 function renderActive(){if(activeTab==="dashboard")renderDashboard();if(activeTab==="orders")renderOrders();if(activeTab==="daily")renderDaily();if(activeTab==="manage")renderManage()}
 function fillSelect(id,values,allLabel){
   const el=document.getElementById(id),old=el.value;el.innerHTML=allLabel?`<option value="all">${esc(allLabel)}</option>`:"";
@@ -261,7 +280,7 @@ function goPage(tab,p){pageState[tab]=p;renderActive()}
 function grouped(rows,span,fn){
   if(!rows.length)return `<tr><td colspan="${span}" class="note">ไม่พบสินค้า</td></tr>`;
   const groups=new Map();rows.forEach(r=>{const c=r.item.category||"อื่นๆ";if(!groups.has(c))groups.set(c,[]);groups.get(c).push(r)});
-  let out="";groups.forEach((list,cat)=>out+=`<tr class="category-row"><td colspan="${span}">📁 ${esc(cat)}</td></tr>`+list.map(fn).join(""));return out;
+  let out="";groups.forEach((list,cat)=>{out+=`<tr class="category-row"><td colspan="${span}">📁 ${esc(cat)}</td></tr>`+list.map(fn).join("")});return out;
 }
 function imgCell(item,index){return item.image?`<img class="item-img" loading="lazy" src="${esc(item.image)}" alt="รูปสินค้า" onclick="showImage(${index})">`:'<span class="note">ไม่มีรูป</span>'}
 function showImage(i){const x=inventory[i];if(!x)return;document.getElementById("imageTitle").textContent=x.name;document.getElementById("imagePreview").src=x.image||"";document.getElementById("imageDetails").textContent=`${x.category} · ${x.supplier} · คงเหลือ ${x.stock} ${x.unit} · ${x.note||"-"}`;document.getElementById("imageModal").style.display="flex"}
@@ -274,6 +293,9 @@ function renderDashboard(){
   document.getElementById("dashBody").innerHTML=grouped(pageRows(list,"dashboard","dashPages"),12,({item,index})=>`<tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td><td style="text-align:left">${esc(item.name)}</td><td>${esc(item.category)}</td><td>${esc(item.supplier)}</td><td>${esc(item.orderDay)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td><td>${num(item.total7Days)}</td><td>${(num(item.total7Days)/7).toFixed(1)}</td><td>${esc(item.note||"-")}</td><td>${badge(item)}</td></tr>`);
 }
 function isMakroSupplier(v){return /makro|แม็คโคร/i.test(String(v||""))}
+
+/* หน้าจอ Makro ใช้ตารางแสดงสต็อกเหมือนแหล่งซื้ออื่น
+   ส่วน PDF และ Excel ยังคงใช้ตาราง 5 คอลัมน์ */
 function renderOrders(){
   const supplier=document.getElementById("orderSupplier").value,day=document.getElementById("orderDay").value,makro=isMakroSupplier(supplier);
   const list=inventory.map((item,index)=>({item,index})).filter(({item})=>(!supplier||item.supplier===supplier)&&(day==="all"||item.orderDay===day));
@@ -283,15 +305,16 @@ function renderOrders(){
   document.getElementById("exportOrderCsvBtn").style.display=makro?"none":"inline-flex";
   document.getElementById("makroPdfBtn").style.display=makro?"inline-flex":"none";
   document.getElementById("makroExcelBtn").style.display=makro?"inline-flex":"none";
-  if(makro){
-    head.innerHTML="<tr><th>ลำดับ</th><th>รูปภาพ</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr>";
-    if(!rows.length){body.innerHTML='<tr><td colspan="5">ไม่พบสินค้า Makro</td></tr>';return}
-    const start=(pageState.orders-1)*PAGE_SIZE;
-    body.innerHTML=rows.map(({item,index},offset)=>`<tr><td>${start+offset+1}</td><td>${imgCell(item,index)}</td><td style="text-align:left"><strong>${esc(item.name)}</strong>${item.code?`<br><small>${esc(item.code)}</small>`:""}<br><small>${esc(item.unit)}</small></td><td><input class="small-input" type="number" min="0" step="any" value="${num(item.buyQty)}" ${isToday()?"":"disabled"} onchange="updateOrderQty(${index},this.value)"></td><td>${esc(item.note||"-")}</td></tr>`).join("");
-    return;
-  }
+
+  // ตารางหน้าจอเหมือนกันทุกแหล่งซื้อ เพื่อให้เห็นคงเหลือก่อนกรอกจำนวน
   head.innerHTML="<tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>หน่วย</th><th>คงเหลือ</th><th>เฉลี่ย/วัน</th><th>สถานะ</th><th>จำนวนสั่ง</th></tr>";
-  body.innerHTML=rows.length?rows.map(({item,index})=>`<tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td><td>${esc(item.name)}</td><td>${esc(item.category)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td><td>${(num(item.total7Days)/7).toFixed(1)}</td><td>${badge(item)}</td><td><input class="small-input" type="number" min="0" step="any" value="${num(item.buyQty)}" ${isToday()?"":"disabled"} onchange="updateOrderQty(${index},this.value)"></td></tr>`).join(""):'<tr><td colspan="9">ไม่พบสินค้า</td></tr>';
+  if(!rows.length){body.innerHTML='<tr><td colspan="9" class="note">ไม่พบสินค้า</td></tr>';return}
+  body.innerHTML=rows.map(({item,index})=>`
+    <tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td><td style="text-align:left">${esc(item.name)}</td>
+    <td>${esc(item.category)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td>
+    <td>${(num(item.total7Days)/7).toFixed(1)}</td><td>${badge(item)}</td>
+    <td><input class="small-input" type="number" min="0" step="any" value="${num(item.buyQty)}" ${isToday()?"":"disabled"} onchange="updateOrderQty(${index},this.value)"></td></tr>
+  `).join("");
 }
 async function updateOrderQty(i,v){
   if(!isToday()){alert("แก้รายการสั่งซื้อย้อนหลังไม่ได้");return}
@@ -307,7 +330,6 @@ async function confirmOrderPlaced(){
   try{await Promise.all(ids.map(i=>db.ref(`${ROOT}/inventory/${i}/buyQty`).set(0)));ids.forEach(i=>{inventory[i].buyQty=0;baseInventory[i].buyQty=0});renderOrders();alert("เคลียร์จำนวนสั่งซื้อแล้ว")}catch(e){alert("ทำรายการไม่สำเร็จ: "+e.message)}
 }
 
-/* PDF Makro: เปิดหน้าพิมพ์ใหม่ ใช้ A4 แนวตั้งและขอบ 5 มม. */
 function getMakroOrderItems(){
   const sup=document.getElementById("orderSupplier").value,day=document.getElementById("orderDay").value;
   if(!isMakroSupplier(sup))throw new Error("กรุณาเลือกแหล่งซื้อ Makro ก่อน");
@@ -318,8 +340,7 @@ function makroReportHtml(items){
   return `<div class="makro-sheet"><div class="brand">Holoyo</div><div class="store-name">ศูนย์อาหารโรงชาย KKU</div><table class="makro-table"><thead><tr><th>ลำดับ</th><th>รูปภาพ</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
 }
 async function downloadMakroPdf(){
-  let items;
-  try{items=getMakroOrderItems()}catch(e){alert(e.message);return}
+  let items;try{items=getMakroOrderItems()}catch(e){alert(e.message);return}
   if(!items.length){alert("กรุณากรอกจำนวนสั่งซื้อ Makro ก่อน");return}
   const win=window.open("","_blank");
   if(!win){alert("เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาตป๊อปอัปแล้วลองใหม่");return}
@@ -357,7 +378,7 @@ function excelImageInfo(data){
 }
 function thinBorder(){const s={style:"thin",color:{argb:"FF222222"}};return{top:s,bottom:s,left:s,right:s}}
 async function downloadMakroExcel(){
-  if(typeof ExcelJS==="undefined"){alert("โหลดระบบ Excel ไม่สำเร็จ ตรวจสอบอินเทอร์เน็ต");return}
+  if(typeof ExcelJS==="undefined"){alert("โหลดระบบ Excel ไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต");return}
   let items;try{items=getMakroOrderItems()}catch(e){alert(e.message);return}
   if(!items.length){alert("กรุณากรอกจำนวนสั่งซื้อ Makro ก่อน");return}
   const btn=document.getElementById("makroExcelBtn"),old=btn.textContent;btn.disabled=true;btn.textContent="กำลังสร้าง Excel...";
@@ -414,8 +435,7 @@ function renderManage(){
 
 async function changeDate(){
   const date=document.getElementById("recordDate").value;if(!date)return;
-  historyEditMode=false;loadedDailyLog=null;dailyDraft={};
-  document.getElementById("historyStatus").style.display=date===todayStr?"none":"inline";
+  historyEditMode=false;loadedDailyLog=null;dailyDraft={};document.getElementById("historyStatus").style.display=date===todayStr?"none":"inline";
   const load=document.getElementById("loading");load.style.display="flex";load.textContent="กำลังโหลดข้อมูลวันที่เลือก...";
   try{
     const snap=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");loadedDailyLog=snap.val();
@@ -459,7 +479,8 @@ async function saveCorrection(date,oldLog){
     const d=dailyDraft[i]||{received:0,used:0},r=Math.max(0,num(d.received)),u=Math.max(0,num(d.used));
     const stockDelta=(r-num(x.buyQty))-(u-num(x.usedToday)),usedDelta=u-num(x.usedToday);
     corrected.push({...x,stock:Math.max(0,Number((num(x.stock)+stockDelta).toFixed(2))),total7Days:Math.max(0,Number((num(x.total7Days)+usedDelta).toFixed(2))),buyQty:r,usedToday:u});
-    const j=findCurrentIndex(x,i);if(j>=0){const cur=baseInventory[j],stock=Math.max(0,Number((num(cur.stock)+stockDelta).toFixed(2))),total7Days=Math.max(0,Number((num(cur.total7Days)+usedDelta).toFixed(2)));baseInventory[j]={...cur,stock,total7Days};updates[`${ROOT}/inventory/${j}/stock`]=stock;updates[`${ROOT}/inventory/${j}/total7Days`]=total7Days}
+    const j=findCurrentIndex(x,i);
+    if(j>=0){const cur=baseInventory[j],stock=Math.max(0,Number((num(cur.stock)+stockDelta).toFixed(2))),total7Days=Math.max(0,Number((num(cur.total7Days)+usedDelta).toFixed(2)));baseInventory[j]={...cur,stock,total7Days};updates[`${ROOT}/inventory/${j}/stock`]=stock;updates[`${ROOT}/inventory/${j}/total7Days`]=total7Days}
   });
   const log={...oldLog,date,updatedBy:currentUser||"ไม่ระบุชื่อ",updatedAt:new Date().toISOString(),inventory:corrected};updates[`${ROOT}/dailyLogs/${date}`]=log;
   await db.ref().update(updates);loadedDailyLog=log;historyEditMode=false;inventory=isToday()?baseInventory.map(x=>({...x})):corrected.map(x=>({...x}));
@@ -493,7 +514,7 @@ async function addItem(){
 }
 async function updateField(i,f,v){
   if(!isToday()){alert("ดูข้อมูลย้อนหลังได้อย่างเดียว");renderManage();return}
-  const n=["stock","total7Days"].includes(f),value=n?Math.max(0,Number.parseFloat(v)||0):String(v).trim();inventory[i][f]=value;baseInventory[i][f]=value;
+  const numeric=["stock","total7Days"].includes(f),value=numeric?Math.max(0,Number.parseFloat(v)||0):String(v).trim();inventory[i][f]=value;baseInventory[i][f]=value;
   try{await db.ref(`${ROOT}/inventory/${i}/${f}`).set(value)}catch(e){alert("บันทึกไม่สำเร็จ: "+e.message)}
 }
 async function deleteItem(i){
@@ -543,8 +564,11 @@ async function copyOrder(){
   const sup=document.getElementById("orderSupplier").value,day=document.getElementById("orderDay").value,list=inventory.filter(x=>(!sup||x.supplier===sup)&&(day==="all"||x.orderDay===day)&&num(x.buyQty)>0);
   if(!list.length){alert("ไม่มีจำนวนสั่งซื้อ");return}
   const text=list.map(x=>`${x.code?x.code+" ":""}${x.name} ${x.buyQty} ${x.unit}`).join("\n");
-  try{if(navigator.clipboard&&location.protocol==="https:")await navigator.clipboard.writeText(text);else{const a=document.createElement("textarea");a.value=text;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}alert("คัดลอกรายการแล้ว ให้วางข้อความใน LINE")}
-  catch(e){alert("คัดลอกไม่สำเร็จ: "+e.message)}
+  try{
+    if(navigator.clipboard&&location.protocol==="https:")await navigator.clipboard.writeText(text);
+    else{const a=document.createElement("textarea");a.value=text;document.body.appendChild(a);a.select();document.execCommand("copy");a.remove()}
+    alert("คัดลอกรายการแล้ว ให้วางข้อความใน LINE");
+  }catch(e){alert("คัดลอกไม่สำเร็จ: "+e.message)}
 }
 function downloadTemplate(){downloadCsv("Malatang_Template.csv",[["รหัสสินค้า","ชื่อสินค้า","หมวดหมู่","แหล่งซื้อ","วันสั่งซื้อ","หน่วย","สต็อกตั้งต้น","หมายเหตุ"],["M01","เส้นหนุบจีน","เส้น","โกดังของเราเอง","วันจันทร์","ถุง",12,"แช่น้ำก่อนใช้"]])}
 function parseCsv(line){
