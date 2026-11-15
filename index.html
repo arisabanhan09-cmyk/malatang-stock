@@ -270,13 +270,33 @@ function updateDropdowns(){
 }
 function scheduleRender(tab){clearTimeout(searchTimer);pageState[tab]=1;searchTimer=setTimeout(()=>{if(activeTab===tab)renderActive()},180)}
 function resetPage(tab){pageState[tab]=1;renderActive()}
-function pageRows(rows,tab,id){
-  const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));pageState[tab]=Math.min(Math.max(1,pageState[tab]||1),pages);
-  const start=(pageState[tab]-1)*PAGE_SIZE,el=document.getElementById(id);
-  el.innerHTML=rows.length>PAGE_SIZE?`<button onclick="goPage('${tab}',${pageState[tab]-1})" ${pageState[tab]===1?"disabled":""}>ก่อนหน้า</button><span>หน้า ${pageState[tab]} / ${pages} · ${rows.length} รายการ</span><button onclick="goPage('${tab}',${pageState[tab]+1})" ${pageState[tab]===pages?"disabled":""}>ถัดไป</button>`:`<span class="note">${rows.length} รายการ</span>`;
-  return rows.slice(start,start+PAGE_SIZE);
-}
-function goPage(tab,p){pageState[tab]=p;renderActive()}
+function pageRows(rows, tab, id) {
+  rows.sort((a, b) => {
+    const codeA = String(a.item.code || "").trim();
+    const codeB = String(b.item.code || "").trim();
+
+    if (!codeA) return codeB ? 1 : 0;
+    if (!codeB) return -1;
+
+    return codeA.localeCompare(codeB, undefined, {
+      numeric: true,
+      sensitivity: "base"
+    });
+  });
+
+  const pages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  pageState[tab] = Math.min(Math.max(1, pageState[tab] || 1), pages);
+  const start = (pageState[tab] - 1) * PAGE_SIZE;
+  const el = document.getElementById(id);
+
+  el.innerHTML = rows.length > PAGE_SIZE
+    ? `<button onclick="goPage('${tab}',${pageState[tab]-1})" ${pageState[tab] === 1 ? "disabled" : ""}>ก่อนหน้า</button>
+       <span>หน้า ${pageState[tab]} / ${pages} · ${rows.length} รายการ</span>
+       <button onclick="goPage('${tab}',${pageState[tab]+1})" ${pageState[tab] === pages ? "disabled" : ""}>ถัดไป</button>`
+    : `<span class="note">${rows.length} รายการ</span>`;
+
+  return rows.slice(start, start + PAGE_SIZE);
+}function goPage(tab,p){pageState[tab]=p;renderActive()}
 function grouped(rows,span,fn){
   if(!rows.length)return `<tr><td colspan="${span}" class="note">ไม่พบสินค้า</td></tr>`;
   const groups=new Map();rows.forEach(r=>{const c=r.item.category||"อื่นๆ";if(!groups.has(c))groups.set(c,[]);groups.get(c).push(r)});
@@ -335,11 +355,40 @@ function getMakroOrderItems(){
   if(!isMakroSupplier(sup))throw new Error("กรุณาเลือกแหล่งซื้อ Makro ก่อน");
   return inventory.filter(x=>x.supplier===sup&&(day==="all"||x.orderDay===day)&&num(x.buyQty)>0);
 }
-function makroReportHtml(items){
-  const rows=items.map((x,i)=>`<tr><td>${i+1}</td><td class="photo">${x.image?`<img src="${esc(x.image)}" alt="รูปสินค้า">`:"ไม่มีรูป"}</td><td>${esc(x.name)}${x.code?`<br><small>${esc(x.code)}</small>`:""}</td><td>${esc(x.buyQty)} ${esc(x.unit)}</td><td>${esc(x.note||"")}</td></tr>`).join("");
-  return `<div class="makro-sheet"><div class="brand">Holoyo</div><div class="store-name">ศูนย์อาหารโรงชาย KKU</div><table class="makro-table"><thead><tr><th>ลำดับ</th><th>รูปภาพ</th><th>สินค้า</th><th>จำนวน</th><th>หมายเหตุ</th></tr></thead><tbody>${rows}</tbody></table></div>`;
-}
-async function downloadMakroPdf(){
+function makroReportHtml(items) {
+  const rows = items.map((x, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td class="photo">
+        ${x.image
+          ? `<img src="${esc(x.image)}" alt="รูปสินค้า">`
+          : "ไม่มีรูป"}
+      </td>
+      <td>${esc(x.name)}</td>
+      <td>${esc(x.buyQty)} ${esc(x.unit)}</td>
+      <td>${esc(x.note || "")}</td>
+    </tr>
+  `).join("");
+
+  return `
+    <div class="makro-sheet">
+      <div class="brand">Holoyo</div>
+      <div class="store-name">ศูนย์อาหารโรงชาย KKU</div>
+      <table class="makro-table">
+        <thead>
+          <tr>
+            <th>ลำดับ</th>
+            <th>รูปภาพ</th>
+            <th>สินค้า</th>
+            <th>จำนวน</th>
+            <th>หมายเหตุ</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}async function downloadMakroPdf(){
   let items;try{items=getMakroOrderItems()}catch(e){alert(e.message);return}
   if(!items.length){alert("กรุณากรอกจำนวนสั่งซื้อ Makro ก่อน");return}
   const win=window.open("","_blank");
