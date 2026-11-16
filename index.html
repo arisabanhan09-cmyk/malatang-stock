@@ -94,6 +94,7 @@ th{background:#f1faee;color:#1d3557}
     <button class="tab-btn" onclick="switchTab('orders',this)">🛒 สั่งซื้อ</button>
     <button class="tab-btn" onclick="switchTab('daily',this)">📝 บันทึกประจำวัน</button>
     <button class="tab-btn" onclick="switchTab('manage',this)">⚙️ จัดการสินค้า</button>
+<button class="tab-btn" onclick="switchTab('stockCheck',this)">🔎 เช็คสต็อก</button>
   </nav>
 
   <section id="dashboard" class="tab active">
@@ -223,7 +224,9 @@ const defaultInventory=[
 let categories=[...defaultCategories],partners=[...defaultPartners],inventory=[],baseInventory=[];
 let currentUser=localStorage.getItem("malatang_user")||"",activeTab="dashboard",searchTimer=null,saveInProgress=false;
 let dailyDraft={},loadedDailyLog=null,historyEditMode=false;
-const pageState={dashboard:1,orders:1,daily:1,manage:1};
+let stockCheckDraft={};
+
+const pageState={dashboard:1,orders:1,daily:1,manage:1,stockCheck:1};
 function localDate(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 const todayStr=localDate();
 document.getElementById("recordDate").value=todayStr;
@@ -253,7 +256,13 @@ async function loadData(){
 loadData();
 
 function switchTab(id,btn){activeTab=id;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.id===id));document.querySelectorAll(".tab-btn").forEach(x=>x.classList.toggle("active",x===btn));renderActive()}
-function renderActive(){if(activeTab==="dashboard")renderDashboard();if(activeTab==="orders")renderOrders();if(activeTab==="daily")renderDaily();if(activeTab==="manage")renderManage()}
+function renderActive(){
+  if(activeTab==="dashboard")renderDashboard();
+  if(activeTab==="stockCheck")renderStockCheck();
+  if(activeTab==="orders")renderOrders();
+  if(activeTab==="daily")renderDaily();
+  if(activeTab==="manage")renderManage();
+}
 function fillSelect(id,values,allLabel){
   const el=document.getElementById(id),old=el.value;el.innerHTML=allLabel?`<option value="all">${esc(allLabel)}</option>`:"";
   values.forEach(v=>el.insertAdjacentHTML("beforeend",`<option value="${esc(v)}">${esc(v)}</option>`));
@@ -307,7 +316,118 @@ function showImage(i){const x=inventory[i];if(!x)return;document.getElementById(
 function closeImage(){document.getElementById("imageModal").style.display="none"}
 function badge(x){return num(x.stock)<=3?'<span class="badge-low">สั่งเพิ่มด่วน</span>':'<span class="badge-ok">ปกติ</span>'}
 
-function renderDashboard(){
+function renderDashboard()function renderStockCheck(){
+  const rows=inventory
+    .map((item,index)=>({item,index}))
+    .sort((a,b)=>String(a.item.code||"").localeCompare(
+      String(b.item.code||""),undefined,{numeric:true,sensitivity:"base"}
+    ));
+
+  const disabled=isToday()?"":"disabled";
+  document.getElementById("stockCheckBody").innerHTML=rows.length
+    ? rows.map(({item,index})=>{
+        const count=stockCheckDraft[index]??"";
+        const diff=count===""?"—":(Number(count)-num(item.stock)).toFixed(2).replace(/\.?0+$/,"");
+        return `<tr>
+          <td>${esc(item.code||"-")}</td>
+          <td style="text-align:left">${esc(item.name)}</td>
+          <td>${esc(item.unit)}</td>
+          <td>${num(item.stock)}</td>
+          <td>
+            <input class="small-input" type="number" min="0" step="any"
+              value="${esc(count)}" ${disabled}
+              oninput="updateStockCheckCount(${index},this.value)">
+          </td>
+          <td id="stockDiff-${index}">${diff}</td>
+        </tr>`;
+      }).join("")
+    : '<tr><td colspan="6" class="note">ยังไม่มีรายการสินค้า</td></tr>';
+
+  const btn=document.getElementById("saveStockCheckBtn");
+  btn.disabled=!isToday();
+  btn.title=isToday()?"":"เลือกได้เฉพาะวันที่ปัจจุบัน";
+}
+
+function updateStockCheckCount(index,value){
+  stockCheckDraft[index]=value;
+  const cell=document.getElementById(`stockDiff-${index}`);
+  if(!cell)return;
+
+  if(value===""){
+    cell.textContent="—";
+    return;
+  }
+
+  const difference=Number(value)-num(inventory[index]?.stock);
+  cell.textContent=Number.isFinite(difference)
+    ? difference.toFixed(2).replace(/\.?0+$/,"")
+    : "—";
+}
+
+async function saveStockCheck(){
+  if(!isToday()){
+    alert("บันทึกผลเช็คสต็อกได้เฉพาะวันที่ปัจจุบัน");
+    return;
+  }
+
+  const changes=Object.entries(stockCheckDraft)
+    .filter(([,value])=>String(value).trim()!=="")
+    .map(([index,value])=>({
+      index:Number(index),
+      counted:Number(value)
+    }));
+
+  if(!changes.length){
+    alert("กรุณากรอกจำนวนที่นับได้อย่างน้อย 1 รายการ");
+    return;
+  }
+
+  if(changes.some(x=>!Number.isFinite(x.counted)||x.counted<0)){
+    alert("จำนวนที่นับต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป");
+    return;
+  }
+
+  const date=document.getElementById("recordDate").value;
+  const checkId=String(Date.now());
+  const record={
+    date,
+    checkedBy:currentUser||"ไม่ระบุชื่อ",
+    checkedAt:new Date().toISOString(),
+    items:changes.map(({index,counted})=>({
+      code:inventory[index]?.code||"",
+      name:inventory[index]?.name||"",
+      previousStock:num(inventory[index]?.stock),
+      countedStock:counted,
+      difference:Number((counted-num(inventory[index]?.stock)).toFixed(2))
+    }))
+  };
+
+  const updates={};
+  changes.forEach(({index,counted})=>{
+    updates[`${ROOT}/inventory/${index}/stock`]=counted;
+  });
+  updates[`${ROOT}/stockChecks/${date}/${checkId}`]=record;
+
+  const btn=document.getElementById("saveStockCheckBtn");
+  btn.disabled=true;
+
+  try{
+    await db.ref().update(updates);
+
+    changes.forEach(({index,counted})=>{
+      if(inventory[index])inventory[index].stock=counted;
+      if(baseInventory[index])baseInventory[index].stock=counted;
+    });
+
+    stockCheckDraft={};
+    renderStockCheck();
+    alert("บันทึกผลเช็คสต็อกและปรับยอดคงเหลือเรียบร้อย");
+  }catch(error){
+    console.error(error);
+    alert("บันทึกไม่สำเร็จ: "+error.message);
+    btn.disabled=false;
+  }
+}{
   const key=document.getElementById("dashSearch").value.trim().toLowerCase(),sup=document.getElementById("dashSupplier").value,day=document.getElementById("dashDay").value;
   const list=inventory.map((item,index)=>({item,index})).filter(({item})=>(!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&(sup==="all"||item.supplier===sup)&&(day==="all"||item.orderDay===day));
   document.getElementById("dashBody").innerHTML=grouped(pageRows(list,"dashboard","dashPages"),12,({item,index})=>`<tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td><td style="text-align:left">${esc(item.name)}</td><td>${esc(item.category)}</td><td>${esc(item.supplier)}</td><td>${esc(item.orderDay)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td><td>${num(item.total7Days)}</td><td>${(num(item.total7Days)/7).toFixed(1)}</td><td>${esc(item.note||"-")}</td><td>${badge(item)}</td></tr>`);
