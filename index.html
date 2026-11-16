@@ -122,11 +122,15 @@ th{background:#f1faee;color:#1d3557}
   <section id="stockCheck" class="tab">
     <div class="card">
       <h3>🔎 เช็คสต็อกสินค้า</h3>
-      <p class="note">กรอกจำนวนที่นับได้จริง ระบบจะแสดงผลต่างจากยอดในระบบ เมื่อบันทึกจะปรับยอดคงเหลือและเก็บประวัติ</p>
-      <div class="table-wrap"><table>
-        <thead><tr><th>รหัส</th><th>สินค้า</th><th>หน่วย</th><th>คงเหลือในระบบ</th><th>นับได้จริง</th><th>ผลต่าง</th></tr></thead>
-        <tbody id="stockCheckBody"></tbody>
-      </table></div>
+      <p class="note">กรอกจำนวนที่นับได้จริง ระบบจะแสดงผลต่าง เมื่อบันทึกจะปรับยอดคงเหลือและเก็บประวัติการตรวจ</p>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>รหัส</th><th>สินค้า</th><th>หน่วย</th><th>คงเหลือในระบบ</th><th>นับได้จริง</th><th>ผลต่าง</th></tr>
+          </thead>
+          <tbody id="stockCheckBody"></tbody>
+        </table>
+      </div>
       <div class="actions">
         <button id="saveStockCheckBtn" class="btn" onclick="saveStockCheck()">💾 บันทึกผลเช็คสต็อก</button>
       </div>
@@ -239,7 +243,8 @@ th{background:#f1faee;color:#1d3557}
         projectId: "malatang-stock",
         storageBucket: "malatang-stock.firebasestorage.app",
         messagingSenderId: "767469911960",
-        appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed",};
+        appId: "1:767469911960:web:d7aa5718d59b6929d3f5ed",
+};
 
 firebase.initializeApp(firebaseConfig);
 const db=firebase.database(),ROOT="malatang_stock",PAGE_SIZE=30;
@@ -255,7 +260,7 @@ let categories=[...defaultCategories],partners=[...defaultPartners],inventory=[]
 let currentUser=localStorage.getItem("malatang_user")||"";
 let activeTab="dashboard",searchTimer=null,saveInProgress=false;
 let dailyDraft={},loadedDailyLog=null,historyEditMode=false,stockCheckDraft={};
-const pageState={dashboard:1,stockCheck:1,orders:1,daily:1,manage:1};
+const pageState={dashboard:1,orders:1,daily:1,manage:1,stockCheck:1};
 
 function localDate(d=new Date()){
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -434,13 +439,18 @@ function renderDashboard(){
 /* หน้าเช็คสต็อก */
 function renderStockCheck(){
   const rows=inventory.map((item,index)=>({item,index})).sort((a,b)=>
-    String(a.item.code||"").localeCompare(String(b.item.code||""),undefined,{numeric:true,sensitivity:"base"})
+    String(a.item.code||"").localeCompare(
+      String(b.item.code||""),undefined,{numeric:true,sensitivity:"base"}
+    )
   );
   const disabled=isToday()?"":"disabled";
-  document.getElementById("stockCheckBody").innerHTML=rows.length
+  const body=document.getElementById("stockCheckBody");
+
+  body.innerHTML=rows.length
     ? rows.map(({item,index})=>{
         const count=stockCheckDraft[index]??"";
-        const diff=count===""?"—":(Number(count)-num(item.stock)).toFixed(2).replace(/\.?0+$/,"");
+        const parsed=Number(count);
+        const diff=count===""||!Number.isFinite(parsed)?"—":parsed-num(item.stock);
         return `<tr>
           <td>${esc(item.code||"-")}</td>
           <td style="text-align:left">${esc(item.name)}</td>
@@ -454,19 +464,15 @@ function renderStockCheck(){
       }).join("")
     : '<tr><td colspan="6" class="note">ยังไม่มีรายการสินค้า</td></tr>';
 
-  const btn=document.getElementById("saveStockCheckBtn");
-  btn.disabled=!isToday();
-  btn.title=isToday()?"":"เลือกได้เฉพาะวันที่ปัจจุบัน";
+  document.getElementById("saveStockCheckBtn").disabled=!isToday();
 }
 function updateStockCheckCount(index,value){
   stockCheckDraft[index]=value;
   const cell=document.getElementById(`stockDiff-${index}`);
   if(!cell)return;
   if(value===""){cell.textContent="—";return}
-  const difference=Number(value)-num(inventory[index]?.stock);
-  cell.textContent=Number.isFinite(difference)
-    ? difference.toFixed(2).replace(/\.?0+$/,"")
-    : "—";
+  const count=Number(value);
+  cell.textContent=Number.isFinite(count)?count-num(inventory[index]?.stock):"—";
 }
 async function saveStockCheck(){
   if(!isToday()){
@@ -488,7 +494,6 @@ async function saveStockCheck(){
   }
 
   const date=document.getElementById("recordDate").value;
-  const checkId=String(Date.now());
   const record={
     date,
     checkedBy:currentUser||"ไม่ระบุชื่อ",
@@ -506,10 +511,12 @@ async function saveStockCheck(){
   changes.forEach(({index,counted})=>{
     updates[`${ROOT}/inventory/${index}/stock`]=counted;
   });
-  updates[`${ROOT}/stockChecks/${date}/${checkId}`]=record;
 
-  const btn=document.getElementById("saveStockCheckBtn");
-  btn.disabled=true;
+  const historyRef=db.ref(`${ROOT}/stockChecks/${date}`).push();
+  updates[`${ROOT}/stockChecks/${date}/${historyRef.key}`]=record;
+
+  const button=document.getElementById("saveStockCheckBtn");
+  button.disabled=true;
   try{
     await db.ref().update(updates);
     changes.forEach(({index,counted})=>{
@@ -519,10 +526,10 @@ async function saveStockCheck(){
     stockCheckDraft={};
     renderStockCheck();
     alert("บันทึกผลเช็คสต็อกและปรับยอดคงเหลือเรียบร้อย");
-  }catch(e){
-    console.error(e);
-    alert("บันทึกไม่สำเร็จ: "+e.message);
-    btn.disabled=false;
+  }catch(error){
+    console.error(error);
+    alert("บันทึกไม่สำเร็จ: "+error.message);
+    button.disabled=false;
   }
 }
 
@@ -544,10 +551,8 @@ function renderOrders(){
   document.getElementById("makroExcelBtn").style.display=makro?"inline-flex":"none";
 
   head.innerHTML="<tr><th>รูป</th><th>รหัส</th><th>สินค้า</th><th>หมวดหมู่</th><th>หน่วย</th><th>คงเหลือ</th><th>เฉลี่ย/วัน</th><th>สถานะ</th><th>จำนวนสั่ง</th></tr>";
-  if(!rows.length){
-    body.innerHTML='<tr><td colspan="9" class="note">ไม่พบสินค้า</td></tr>';
-    return;
-  }
+  if(!rows.length){body.innerHTML='<tr><td colspan="9" class="note">ไม่พบสินค้า</td></tr>';return}
+
   body.innerHTML=rows.map(({item,index})=>`
     <tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td>
     <td style="text-align:left">${esc(item.name)}</td><td>${esc(item.category)}</td>
@@ -585,8 +590,7 @@ function getMakroOrderItems(){
   const sup=document.getElementById("orderSupplier").value;
   const day=document.getElementById("orderDay").value;
   if(!isMakroSupplier(sup))throw new Error("กรุณาเลือกแหล่งซื้อ Makro ก่อน");
-  return inventory.filter(x=>x.supplier===sup&&(day==="all"||x.orderDay===day)&&num(x.buyQty)>0)
-    .sort((a,b)=>String(a.code||"").localeCompare(String(b.code||""),undefined,{numeric:true,sensitivity:"base"}));
+  return inventory.filter(x=>x.supplier===sup&&(day==="all"||x.orderDay===day)&&num(x.buyQty)>0);
 }
 function makroReportHtml(items){
   const rows=items.map((x,i)=>`
@@ -616,26 +620,26 @@ async function downloadMakroPdf(){
   if(!win){alert("เบราว์เซอร์บล็อกหน้าต่างพิมพ์ กรุณาอนุญาตป๊อปอัปแล้วลองใหม่");return}
   win.document.open();
   win.document.write(`<!DOCTYPE html><html lang="th"><head><meta charset="UTF-8"><title>ใบสั่งซื้อ Makro</title>
-    <style>
-    @page{size:A4 portrait;margin:5mm}
-    *{box-sizing:border-box}
-    html,body{width:100%;margin:0;padding:0;color:#000;background:#fff;font-family:Arial,Tahoma,sans-serif}
-    .makro-sheet{width:100%;max-width:100%;margin:0;padding:0;overflow:visible}
-    .brand,.store-name{width:100%;border:1px solid #111;padding:2mm;text-align:center;font-size:11pt}
-    .store-name{border-top:0}
-    .makro-table{width:100%;max-width:100%;margin:0;border-collapse:collapse;table-layout:fixed}
-    .makro-table th,.makro-table td{border:1px solid #111;padding:1.5mm;text-align:center;vertical-align:middle;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
-    .makro-table th{height:8mm;background:#f1faee;font-size:9pt;font-weight:normal}
-    .makro-table td{height:28mm;font-size:9pt}
-    .makro-table th:nth-child(1),.makro-table td:nth-child(1){width:9%}
-    .makro-table th:nth-child(2),.makro-table td:nth-child(2){width:21%}
-    .makro-table th:nth-child(3),.makro-table td:nth-child(3){width:30%}
-    .makro-table th:nth-child(4),.makro-table td:nth-child(4){width:17%}
-    .makro-table th:nth-child(5),.makro-table td:nth-child(5){width:23%}
-    .makro-table .photo img{display:block;max-width:100%;max-height:25mm;margin:auto;object-fit:contain}
-    tr{break-inside:avoid;page-break-inside:avoid}
-    @media screen{body{padding:10mm}.makro-sheet{max-width:190mm;margin:auto}}
-    </style></head><body>${makroReportHtml(items)}</body></html>`);
+  <style>
+  @page{size:A4 portrait;margin:5mm}
+  *{box-sizing:border-box}
+  html,body{width:100%;margin:0;padding:0;color:#000;background:#fff;font-family:Arial,Tahoma,sans-serif}
+  .makro-sheet{width:100%;max-width:100%;margin:0;padding:0;overflow:visible}
+  .brand,.store-name{width:100%;border:1px solid #111;padding:2mm;text-align:center;font-size:11pt}
+  .store-name{border-top:0}
+  .makro-table{width:100%;max-width:100%;margin:0;border-collapse:collapse;table-layout:fixed}
+  .makro-table th,.makro-table td{border:1px solid #111;padding:1.5mm;text-align:center;vertical-align:middle;white-space:normal;overflow-wrap:anywhere;word-break:break-word}
+  .makro-table th{height:8mm;background:#f1faee;font-size:9pt;font-weight:normal}
+  .makro-table td{height:28mm;font-size:9pt}
+  .makro-table th:nth-child(1),.makro-table td:nth-child(1){width:9%}
+  .makro-table th:nth-child(2),.makro-table td:nth-child(2){width:21%}
+  .makro-table th:nth-child(3),.makro-table td:nth-child(3){width:30%}
+  .makro-table th:nth-child(4),.makro-table td:nth-child(4){width:17%}
+  .makro-table th:nth-child(5),.makro-table td:nth-child(5){width:23%}
+  .makro-table .photo img{display:block;max-width:100%;max-height:25mm;margin:auto;object-fit:contain}
+  tr{break-inside:avoid;page-break-inside:avoid}
+  @media screen{body{padding:10mm}.makro-sheet{max-width:190mm;margin:auto}}
+  </style></head><body>${makroReportHtml(items)}</body></html>`);
   win.document.close();
   try{
     await Promise.all([...win.document.images].map(img=>img.complete?Promise.resolve():new Promise(resolve=>{img.onload=resolve;img.onerror=resolve})));
@@ -661,26 +665,21 @@ async function downloadMakroExcel(){
   try{
     const wb=new ExcelJS.Workbook(),ws=wb.addWorksheet("ใบสั่งซื้อ Makro");
     ws.columns=[{width:10},{width:22},{width:34},{width:16},{width:24}];
-    ws.mergeCells("A1:E1");
-    ws.getCell("A1").value="Holoyo";
-    ws.getCell("A1").alignment={horizontal:"center"};
-    ws.getCell("A1").font={bold:true,size:14};
-    ws.mergeCells("A2:E2");
-    ws.getCell("A2").value="ศูนย์อาหารโรงชาย KKU";
-    ws.getCell("A2").alignment={horizontal:"center"};
-    ws.getCell("A2").font={bold:true};
+    ws.mergeCells("A1:E1");ws.getCell("A1").value="Holoyo";
+    ws.getCell("A1").alignment={horizontal:"center"};ws.getCell("A1").font={bold:true,size:14};
+    ws.mergeCells("A2:E2");ws.getCell("A2").value="ศูนย์อาหารโรงชาย KKU";
+    ws.getCell("A2").alignment={horizontal:"center"};ws.getCell("A2").font={bold:true};
 
     ["ลำดับ","รูปภาพ","สินค้า","จำนวน","หมายเหตุ"].forEach((v,i)=>{
       const c=ws.getRow(3).getCell(i+1);
       c.value=v;c.font={bold:true};
-      c.alignment={horizontal:"center",vertical:"middle"};
-      c.border=thinBorder();
+      c.alignment={horizontal:"center",vertical:"middle"};c.border=thinBorder();
     });
 
     items.forEach((x,i)=>{
       const rn=i+4,r=ws.getRow(rn);
       r.getCell(1).value=i+1;
-      r.getCell(3).value=x.name;
+      r.getCell(3).value=x.name+(x.code?` (${x.code})`:"");
       r.getCell(4).value=`${x.buyQty} ${x.unit}`;
       r.getCell(5).value=x.note||"";
       r.height=70;
@@ -717,15 +716,11 @@ function renderDaily(){
   document.getElementById("dailyBody").innerHTML=grouped(rows,8,({item,index})=>{
     const d=dailyDraft[index]||{received:0,used:0};
     return `<tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td>
-      <td style="text-align:left">${esc(item.name)}</td><td>${esc(item.unit)}</td>
-      <td>${num(item.stock)}</td>
-      <td><input class="small-input" type="number" min="0" step="any" value="${d.received}"
-        ${canEdit?"":"disabled"} onchange="setDraft(${index},'received',this.value)"></td>
-      <td><input class="small-input" type="number" min="0" step="any" value="${d.used}"
-        ${canEdit?"":"disabled"} onchange="setDraft(${index},'used',this.value)"></td>
-      <td>${esc(item.note||"-")}</td></tr>`;
+    <td style="text-align:left">${esc(item.name)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td>
+    <td><input class="small-input" type="number" min="0" step="any" value="${d.received}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'received',this.value)"></td>
+    <td><input class="small-input" type="number" min="0" step="any" value="${d.used}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'used',this.value)"></td>
+    <td>${esc(item.note||"-")}</td></tr>`;
   });
-
   const has=!!(loadedDailyLog&&loadedDailyLog.inventory);
   document.getElementById("editHistoryBtn").style.display=has&&!historyEditMode?"inline-flex":"none";
   document.getElementById("cancelEditBtn").style.display=historyEditMode?"inline-flex":"none";
@@ -755,15 +750,9 @@ function renderManage(){
     </label></td>
     <td><input style="width:70px" value="${esc(item.code)}" ${dis} onchange="updateField(${index},'code',this.value)"></td>
     <td><input style="width:120px" value="${esc(item.name)}" ${dis} onchange="updateField(${index},'name',this.value)"></td>
-    <td><select ${dis} onchange="updateField(${index},'category',this.value)">
-      ${categories.map(v=>`<option value="${esc(v)}" ${v===item.category?"selected":""}>${esc(v)}</option>`).join("")}
-    </select></td>
-    <td><select ${dis} onchange="updateField(${index},'supplier',this.value)">
-      ${partners.map(v=>`<option value="${esc(v)}" ${v===item.supplier?"selected":""}>${esc(v)}</option>`).join("")}
-    </select></td>
-    <td><select ${dis} onchange="updateField(${index},'orderDay',this.value)">
-      ${days.map(v=>`<option value="${v}" ${v===item.orderDay?"selected":""}>${v}</option>`).join("")}
-    </select></td>
+    <td><select ${dis} onchange="updateField(${index},'category',this.value)">${categories.map(v=>`<option value="${esc(v)}" ${v===item.category?"selected":""}>${esc(v)}</option>`).join("")}</select></td>
+    <td><select ${dis} onchange="updateField(${index},'supplier',this.value)">${partners.map(v=>`<option value="${esc(v)}" ${v===item.supplier?"selected":""}>${esc(v)}</option>`).join("")}</select></td>
+    <td><select ${dis} onchange="updateField(${index},'orderDay',this.value)">${days.map(v=>`<option value="${v}" ${v===item.orderDay?"selected":""}>${v}</option>`).join("")}</select></td>
     <td><input style="width:60px" value="${esc(item.unit)}" ${dis} onchange="updateField(${index},'unit',this.value)"></td>
     <td><input class="small-input" type="number" min="0" step="any" value="${num(item.total7Days)}" ${dis} onchange="updateField(${index},'total7Days',this.value)"></td>
     <td><input class="small-input" type="number" min="0" step="any" value="${num(item.stock)}" ${dis} onchange="updateField(${index},'stock',this.value)"></td>
