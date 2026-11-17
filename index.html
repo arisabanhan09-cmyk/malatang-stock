@@ -94,7 +94,8 @@ th{background:#f1faee;color:#1d3557}
     <button class="tab-btn active" onclick="switchTab('dashboard',this)">📊 แดชบอร์ด</button>
     <button class="tab-btn" onclick="switchTab('stockCheck',this)">🔎 เช็คสต็อก</button>
     <button class="tab-btn" onclick="switchTab('orders',this)">🛒 สั่งซื้อ</button>
-    <button class="tab-btn" onclick="switchTab('daily',this)">📝 บันทึกประจำวัน</button>
+    <button class="tab-btn" onclick="switchTab('receive',this)">📥 รับเข้าสินค้า</button>
+<button class="tab-btn" onclick="switchTab('issue',this)">📤 เบิกใช้สินค้า</button>
     <button class="tab-btn" onclick="switchTab('manage',this)">⚙️ จัดการสินค้า</button>
   </nav>
 
@@ -246,7 +247,18 @@ const defaultInventory=[
 
 let categories=[...defaultCategories],partners=[...defaultPartners],inventory=[],baseInventory=[];
 let currentUser=localStorage.getItem("malatang_user")||"",activeTab="dashboard",searchTimer=null,saveInProgress=false;
-let dailyDraft={},loadedDailyLog=null,historyEditMode=false,stockCheckDraft={};
+let currentUser=localStorage.getItem("malatang_user")||"";
+let activeTab="dashboard",searchTimer=null,saveInProgress=false;
+let stockCheckDraft={};
+const movementState={
+  receive:{draft:{},log:null,editing:false,saving:false},
+  issue:{draft:{},log:null,editing:false,saving:false}
+};
+const pageState={dashboard:1,stockCheck:1,orders:1,receive:1,issue:1,manage:1};
+
+function movementItemKey(item){
+  return item.code ? `code:${item.code}` : `name:${item.name}`;
+}
 const pageState={dashboard:1,orders:1,daily:1,manage:1};
 function localDate(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 const todayStr=localDate();
@@ -278,12 +290,17 @@ async function loadData(){
 loadData();
 
 function switchTab(id,btn){activeTab=id;document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("active",x.id===id));document.querySelectorAll(".tab-btn").forEach(x=>x.classList.toggle("active",x===btn));renderActive()}
-function renderActive(){
-  if(activeTab==="dashboard")renderDashboard();
-  if(activeTab==="stockCheck")renderStockCheck();
-  if(activeTab==="orders")renderOrders();
-  if(activeTab==="daily")renderDaily();
-  if(activeTab==="manage")renderManage();
+let currentUser=localStorage.getItem("malatang_user")||"";
+let activeTab="dashboard",searchTimer=null,saveInProgress=false;
+let stockCheckDraft={};
+const movementState={
+  receive:{draft:{},log:null,editing:false,saving:false},
+  issue:{draft:{},log:null,editing:false,saving:false}
+};
+const pageState={dashboard:1,stockCheck:1,orders:1,receive:1,issue:1,manage:1};
+
+function movementItemKey(item){
+  return item.code ? `code:${item.code}` : `name:${item.name}`;
 }
 function fillSelect(id,values,allLabel){
   const el=document.getElementById(id),old=el.value;
@@ -293,21 +310,34 @@ function fillSelect(id,values,allLabel){
 }
 function updateDropdowns(){
   const days=["ทุกวัน","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์","วันอาทิตย์"];
+
   fillSelect("newCategory",categories);
-  document.getElementById("newCategory").insertAdjacentHTML("afterbegin",'<option value="auto">แยกหมวดอัตโนมัติ</option>');
+  document.getElementById("newCategory").insertAdjacentHTML(
+    "afterbegin",
+    '<option value="auto">แยกหมวดอัตโนมัติ</option>'
+  );
   document.getElementById("newCategory").value="auto";
-  fillSelect("newSupplier",partners);fillSelect("newOrderDay",days);
+
+  fillSelect("newSupplier",partners);
+  fillSelect("newOrderDay",days);
   fillSelect("dashSupplier",partners,"ทุกแหล่งซื้อ");
-  fillSelect("dailySupplier",partners,"ทุกแหล่งซื้อ");
-  fillSelect("orderSupplier",partners);
-  fillSelect("manageSupplier",partners,"ทุกแหล่งซื้อ");
-  fillSelect("manageCategory",categories,"ทุกหมวดหมู่");
   fillSelect("stockCheckCategory",categories,"ทุกหมวดหมู่");
   fillSelect("stockCheckSupplier",partners,"ทุกแหล่งซื้อ");
+  fillSelect("orderSupplier",partners);
+  fillSelect("receiveSupplier",partners,"ทุกแหล่งซื้อ");
+  fillSelect("issueSupplier",partners,"ทุกแหล่งซื้อ");
+  fillSelect("manageSupplier",partners,"ทุกแหล่งซื้อ");
+  fillSelect("manageCategory",categories,"ทุกหมวดหมู่");
   fillSelect("dashDay",days,"ทุกวันสั่งซื้อ");
-  fillSelect("dailyDay",days,"ทุกวันสั่งซื้อ");
   fillSelect("orderDay",days,"ทุกวันสั่งซื้อ");
-  document.getElementById("partnerList").innerHTML=partners.map((p,i)=>`<span class="chip">${esc(p)} ${partners.length>1?`<button class="btn btn-red" onclick="deletePartner(${i})">×</button>`:""}</span>`).join("");
+
+  document.getElementById("partnerList").innerHTML=partners.map((partner,index)=>
+    `<span class="chip">${esc(partner)} ${
+      partners.length>1
+        ? `<button class="btn btn-red" onclick="deletePartner(${index})">×</button>`
+        : ""
+    }</span>`
+  ).join("");
 }
 function scheduleRender(tab){clearTimeout(searchTimer);pageState[tab]=1;searchTimer=setTimeout(()=>{if(activeTab===tab)renderActive()},180)}
 function resetPage(tab){pageState[tab]=1;renderActive()}
@@ -497,20 +527,214 @@ async function downloadMakroExcel(){
   finally{btn.disabled=false;btn.textContent=old}
 }
 
-function renderDaily(){
-  const key=document.getElementById("dailySearch").value.trim().toLowerCase(),sup=document.getElementById("dailySupplier").value,day=document.getElementById("dailyDay").value;
-  const list=inventory.map((item,index)=>({item,index})).filter(({item})=>(!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&(sup==="all"||item.supplier===sup)&&(day==="all"||item.orderDay===day));
-  const rows=pageRows(list,"daily","dailyPages"),canEdit=isToday()?(!loadedDailyLog||historyEditMode):historyEditMode;
-  document.getElementById("dailyBody").innerHTML=grouped(rows,8,({item,index})=>{
-    const d=dailyDraft[index]||{received:0,used:0};
-    return `<tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td><td style="text-align:left">${esc(item.name)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td><td><input class="small-input" type="number" min="0" step="any" value="${d.received}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'received',this.value)"></td><td><input class="small-input" type="number" min="0" step="any" value="${d.used}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'used',this.value)"></td><td>${esc(item.note||"-")}</td></tr>`;
-  });
-  const has=!!(loadedDailyLog&&loadedDailyLog.inventory);
-  document.getElementById("editHistoryBtn").style.display=has&&!historyEditMode?"inline-flex":"none";
-  document.getElementById("cancelEditBtn").style.display=historyEditMode?"inline-flex":"none";
-  const b=document.getElementById("saveDailyBtn");b.disabled=!canEdit||saveInProgress;b.textContent=historyEditMode?"💾 บันทึกการแก้ไข":"💾 บันทึกประจำวัน";
+function renderMovement(type){
+  const state=movementState[type];
+  const search=document.getElementById(`${type}Search`).value.trim().toLowerCase();
+  const supplier=document.getElementById(`${type}Supplier`).value;
+  const body=document.getElementById(`${type}Body`);
+  const pageId=`${type}Pages`;
+
+  const filtered=inventory.map((item,index)=>({item,index})).filter(({item})=>
+    (!search ||
+      String(item.name||"").toLowerCase().includes(search) ||
+      String(item.code||"").toLowerCase().includes(search)
+    ) &&
+    (supplier==="all" || item.supplier===supplier)
+  );
+
+  const rows=pageRows(filtered,type,pageId);
+  const savedItems=state.log?.items||[];
+  const savedByKey=new Map(savedItems.map(item=>[movementItemKey(item),item]));
+  const canEdit=isToday()?(!state.log||state.editing):state.editing;
+
+  body.innerHTML=rows.length
+    ? rows.map(({item,index})=>{
+        const saved=savedByKey.get(movementItemKey(item));
+        const value=Object.prototype.hasOwnProperty.call(state.draft,index)
+          ? state.draft[index]
+          : saved ? String(saved.quantity) : "";
+
+        return `<tr>
+          <td>${esc(item.code||"-")}</td>
+          <td style="text-align:left">${esc(item.name)}</td>
+          <td>${esc(item.unit)}</td>
+          <td>
+            <input class="small-input" type="number" min="0" step="any"
+              value="${esc(value)}"
+              ${canEdit?"":"disabled"}
+              oninput="setMovementDraft('${type}',${index},this.value)">
+          </td>
+        </tr>`;
+      }).join("")
+    : '<tr><td colspan="4" class="note">ไม่พบสินค้า</td></tr>';
+
+  const isReceive=type==="receive";
+  document.getElementById(isReceive?"editReceiveBtn":"editIssueBtn").style.display=
+    state.log&&!state.editing?"inline-flex":"none";
+  document.getElementById(isReceive?"cancelReceiveBtn":"cancelIssueBtn").style.display=
+    state.editing?"inline-flex":"none";
+
+  const saveButton=document.getElementById(isReceive?"saveReceiveBtn":"saveIssueBtn");
+  saveButton.disabled=!canEdit||state.saving;
+  saveButton.textContent=state.editing
+    ? "💾 บันทึกการแก้ไข"
+    : isReceive ? "💾 บันทึกรับเข้า" : "💾 บันทึกเบิกใช้";
 }
-function setDraft(i,f,v){if(!dailyDraft[i])dailyDraft[i]={received:0,used:0};dailyDraft[i][f]=Math.max(0,Number.parseFloat(v)||0)}
+
+function renderReceive(){renderMovement("receive")}
+function renderIssue(){renderMovement("issue")}
+
+function setMovementDraft(type,index,value){
+  movementState[type].draft[index]=value;
+}
+
+function editMovement(type){
+  const state=movementState[type];
+  if(!state.log){
+    alert("วันที่เลือกยังไม่มีบันทึกให้แก้ไข");
+    return;
+  }
+
+  state.editing=true;
+  state.draft={};
+
+  state.log.items.forEach(entry=>{
+    const index=inventory.findIndex(item=>
+      movementItemKey(item)===movementItemKey(entry)
+    );
+    if(index>=0)state.draft[index]=String(entry.quantity);
+  });
+
+  renderMovement(type);
+}
+
+function cancelMovementEdit(type){
+  const state=movementState[type];
+  state.editing=false;
+  state.draft={};
+  renderMovement(type);
+}
+
+async function saveMovement(type){
+  const state=movementState[type];
+  const date=document.getElementById("recordDate").value;
+
+  if(!isToday()&&!state.editing){
+    alert("บันทึกวันที่ย้อนหลังได้เมื่อมีประวัติเดิมและเลือกแก้ไขก่อน");
+    return;
+  }
+  if(isToday()&&state.log&&!state.editing){
+    alert("วันนี้มีบันทึกแล้ว กดแก้ไขบันทึกก่อน");
+    return;
+  }
+  if(state.saving)return;
+
+  const newItems=[];
+  for(const [indexText,value] of Object.entries(state.draft)){
+    if(String(value).trim()==="")continue;
+
+    const quantity=Number(value);
+    const index=Number(indexText);
+    const item=inventory[index];
+
+    if(!Number.isFinite(quantity)||quantity<0){
+      alert("จำนวนต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป");
+      return;
+    }
+
+    if(quantity>0&&item){
+      newItems.push({
+        code:item.code||"",
+        name:item.name||"",
+        unit:item.unit||"",
+        quantity
+      });
+    }
+  }
+
+  if(!state.editing&&!newItems.length){
+    alert("กรุณากรอกจำนวนมากกว่า 0 อย่างน้อย 1 รายการ");
+    return;
+  }
+
+  // คำนวณผลต่างจากประวัติเดิม เพื่อไม่ปรับสต็อกซ้ำทั้งยอด
+  const deltas=new Map();
+  const addDelta=(item,amount)=>{
+    const key=movementItemKey(item);
+    deltas.set(key,(deltas.get(key)||0)+amount);
+  };
+
+  if(state.editing){
+    (state.log?.items||[]).forEach(item=>addDelta(item,-num(item.quantity)));
+  }
+  newItems.forEach(item=>addDelta(item,num(item.quantity)));
+
+  const updates={};
+  const stockChanges=[];
+  const usageChanges=[];
+
+  for(const [key,quantityDelta] of deltas){
+    const index=baseInventory.findIndex(item=>movementItemKey(item)===key);
+    if(index<0)continue;
+
+    const stockChange=type==="receive"?quantityDelta:-quantityDelta;
+    const nextStock=Number((num(baseInventory[index].stock)+stockChange).toFixed(2));
+
+    if(nextStock<0){
+      alert(`สต็อกของ "${baseInventory[index].name}" ไม่เพียงพอสำหรับยอดเบิก`);
+      return;
+    }
+
+    updates[`${ROOT}/inventory/${index}/stock`]=nextStock;
+    stockChanges.push({index,stock:nextStock});
+
+    if(type==="issue"){
+      const nextUsage=Math.max(
+        0,
+        Number((num(baseInventory[index].total7Days)+quantityDelta).toFixed(2))
+      );
+      updates[`${ROOT}/inventory/${index}/total7Days`]=nextUsage;
+      usageChanges.push({index,total7Days:nextUsage});
+    }
+  }
+
+  const record={
+    date,
+    type,
+    updatedBy:currentUser||"ไม่ระบุชื่อ",
+    updatedAt:new Date().toISOString(),
+    items:newItems
+  };
+  updates[`${ROOT}/${type}Logs/${date}`]=record;
+
+  state.saving=true;
+  renderMovement(type);
+
+  try{
+    await db.ref().update(updates);
+
+    stockChanges.forEach(({index,stock})=>{
+      baseInventory[index].stock=stock;
+      if(inventory[index])inventory[index].stock=stock;
+    });
+    usageChanges.forEach(({index,total7Days})=>{
+      baseInventory[index].total7Days=total7Days;
+      if(inventory[index])inventory[index].total7Days=total7Days;
+    });
+
+    state.log=record;
+    state.draft={};
+    state.editing=false;
+
+    alert(type==="receive"?"บันทึกรับเข้าเรียบร้อย":"บันทึกเบิกใช้เรียบร้อย");
+  }catch(error){
+    console.error(error);
+    alert("บันทึกไม่สำเร็จ: "+error.message);
+  }finally{
+    state.saving=false;
+    renderMovement(type);
+  }
+}
 
 function renderManage(){
   const key=document.getElementById("manageSearch").value.trim().toLowerCase(),cat=document.getElementById("manageCategory").value,sup=document.getElementById("manageSupplier").value;
@@ -531,39 +755,36 @@ function renderManage(){
 }
 
 async function changeDate(){
-  const date=document.getElementById("recordDate").value;if(!date)return;
-  historyEditMode=false;loadedDailyLog=null;dailyDraft={};stockCheckDraft={};
-  document.getElementById("historyStatus").style.display=date===todayStr?"none":"inline";
-  const load=document.getElementById("loading");load.style.display="flex";load.textContent="กำลังโหลดข้อมูลวันที่เลือก...";
+  const date=document.getElementById("recordDate").value;
+  if(!date)return;
+
+  stockCheckDraft={};
+  movementState.receive={draft:{},log:null,editing:false,saving:false};
+  movementState.issue={draft:{},log:null,editing:false,saving:false};
+
+  document.getElementById("historyStatus").style.display=
+    date===todayStr?"none":"inline";
+
+  const loading=document.getElementById("loading");
+  loading.style.display="flex";
+  loading.textContent="กำลังโหลดข้อมูลวันที่เลือก...";
+
   try{
-    const snap=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");loadedDailyLog=snap.val();
-    inventory=date!==todayStr&&loadedDailyLog?.inventory?cleanItems(loadedDailyLog.inventory):baseInventory.map(x=>({...x}));
-    if(loadedDailyLog?.inventory)cleanItems(loadedDailyLog.inventory).forEach((x,i)=>dailyDraft[i]={received:num(x.buyQty),used:num(x.usedToday)});
+    const [receiveSnapshot,issueSnapshot]=await Promise.all([
+      db.ref(`${ROOT}/receiveLogs/${date}`).once("value"),
+      db.ref(`${ROOT}/issueLogs/${date}`).once("value")
+    ]);
+
+    movementState.receive.log=receiveSnapshot.val();
+    movementState.issue.log=issueSnapshot.val();
+    inventory=baseInventory.map(item=>({...item}));
     renderActive();
-  }catch(e){alert("โหลดข้อมูลไม่สำเร็จ: "+e.message)}
-  finally{load.style.display="none";load.textContent="กำลังโหลดข้อมูล..."}
-}
-function startHistoryEdit(){
-  if(!loadedDailyLog?.inventory){alert("วันที่เลือกยังไม่มีบันทึกให้แก้ไข");return}
-  historyEditMode=true;dailyDraft={};cleanItems(loadedDailyLog.inventory).forEach((x,i)=>dailyDraft[i]={received:num(x.buyQty),used:num(x.usedToday)});renderDaily();
-}
-function cancelEdit(){
-  historyEditMode=false;dailyDraft={};
-  if(loadedDailyLog?.inventory)cleanItems(loadedDailyLog.inventory).forEach((x,i)=>dailyDraft[i]={received:num(x.buyQty),used:num(x.usedToday)});
-  renderDaily();
-}
-function findCurrentIndex(item,i){if(item.code){const j=baseInventory.findIndex(x=>x.code===item.code);if(j>=0)return j}return i<baseInventory.length?i:-1}
-async function saveDaily(){
-  const date=document.getElementById("recordDate").value,editing=historyEditMode;
-  if(date!==todayStr&&!editing){alert("เลือกวันที่มีประวัติแล้วกดแก้ไขบันทึกก่อน");return}
-  if(date===todayStr&&loadedDailyLog&&!editing){alert("วันนี้มีบันทึกแล้ว กดแก้ไขบันทึกก่อน");return}
-  if(saveInProgress)return;saveInProgress=true;
-  try{
-    const snap=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value"),old=snap.val();
-    if(editing){if(!old?.inventory)throw new Error("ไม่พบประวัติเดิม");await saveCorrection(date,old)}
-    else{if(old)throw new Error("มีบันทึกวันนี้แล้ว กรุณากดแก้ไขบันทึก");await saveFirstRecord(date)}
-  }catch(e){console.error(e);alert("บันทึกไม่สำเร็จ: "+e.message)}
-  finally{saveInProgress=false;renderDaily()}
+  }catch(error){
+    alert("โหลดข้อมูลไม่สำเร็จ: "+error.message);
+  }finally{
+    loading.style.display="none";
+    loading.textContent="กำลังโหลดข้อมูล...";
+  }
 }
 async function saveFirstRecord(date){
   const logged=baseInventory.map((x,i)=>{const d=dailyDraft[i]||{received:0,used:0},r=Math.max(0,num(d.received)),u=Math.max(0,num(d.used));return{...x,stock:Math.max(0,Number((num(x.stock)+r-u).toFixed(2))),total7Days:Number((num(x.total7Days)+u).toFixed(2)),buyQty:r,usedToday:u}});
