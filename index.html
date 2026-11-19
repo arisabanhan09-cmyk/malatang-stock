@@ -250,6 +250,7 @@ let dailyDraft={},loadedDailyLog=null,historyEditMode=false,stockCheckDraft={};
 const pageState={dashboard:1,orders:1,daily:1,manage:1};
 function localDate(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 const todayStr=localDate();
+document.getElementById("recordDate").max=todayStr;
 document.getElementById("recordDate").value=todayStr;
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
@@ -500,7 +501,10 @@ async function downloadMakroExcel(){
 function renderDaily(){
   const key=document.getElementById("dailySearch").value.trim().toLowerCase(),sup=document.getElementById("dailySupplier").value,day=document.getElementById("dailyDay").value;
   const list=inventory.map((item,index)=>({item,index})).filter(({item})=>(!key||item.name.toLowerCase().includes(key)||item.code.toLowerCase().includes(key))&&(sup==="all"||item.supplier===sup)&&(day==="all"||item.orderDay===day));
-  const rows=pageRows(list,"daily","dailyPages"),canEdit=isToday()?(!loadedDailyLog||historyEditMode):historyEditMode;
+  const selectedDate=document.getElementById("recordDate").value;
+const rows=pageRows(list,"daily","dailyPages");
+const canEdit=!!selectedDate&&selectedDate<=todayStr&&(!loadedDailyLog||historyEditMode);
+
   document.getElementById("dailyBody").innerHTML=grouped(rows,8,({item,index})=>{
     const d=dailyDraft[index]||{received:0,used:0};
     return `<tr><td>${imgCell(item,index)}</td><td>${esc(item.code||"-")}</td><td style="text-align:left">${esc(item.name)}</td><td>${esc(item.unit)}</td><td>${num(item.stock)}</td><td><input class="small-input" type="number" min="0" step="any" value="${d.received}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'received',this.value)"></td><td><input class="small-input" type="number" min="0" step="any" value="${d.used}" ${canEdit?"":"disabled"} onchange="setDraft(${index},'used',this.value)"></td><td>${esc(item.note||"-")}</td></tr>`;
@@ -554,22 +558,117 @@ function cancelEdit(){
 }
 function findCurrentIndex(item,i){if(item.code){const j=baseInventory.findIndex(x=>x.code===item.code);if(j>=0)return j}return i<baseInventory.length?i:-1}
 async function saveDaily(){
-  const date=document.getElementById("recordDate").value,editing=historyEditMode;
-  if(date!==todayStr&&!editing){alert("เลือกวันที่มีประวัติแล้วกดแก้ไขบันทึกก่อน");return}
-  if(date===todayStr&&loadedDailyLog&&!editing){alert("วันนี้มีบันทึกแล้ว กดแก้ไขบันทึกก่อน");return}
-  if(saveInProgress)return;saveInProgress=true;
+  const date=document.getElementById("recordDate").value;
+
+  if(!date){
+    alert("กรุณาเลือกวันที่");
+    return;
+  }
+  if(date>todayStr){
+    alert("ไม่สามารถบันทึกวันที่อนาคตได้");
+    return;
+  }
+  if(saveInProgress)return;
+
+  saveInProgress=true;
   try{
-    const snap=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value"),old=snap.val();
-    if(editing){if(!old?.inventory)throw new Error("ไม่พบประวัติเดิม");await saveCorrection(date,old)}
-    else{if(old)throw new Error("มีบันทึกวันนี้แล้ว กรุณากดแก้ไขบันทึก");await saveFirstRecord(date)}
-  }catch(e){console.error(e);alert("บันทึกไม่สำเร็จ: "+e.message)}
-  finally{saveInProgress=false;renderDaily()}
+    const snapshot=await db.ref(`${ROOT}/dailyLogs/${date}`).once("value");
+    const existingLog=snapshot.val();
+
+    if(historyEditMode){
+      if(!existingLog?.inventory){
+        throw new Error("ไม่พบประวัติเดิมสำหรับแก้ไข");
+      }
+      await saveCorrection(date,existingLog);
+      return;
+    }
+
+    if(existingLog){
+      loadedDailyLog=existingLog;
+      alert("วันที่เลือกมีบันทึกแล้ว กดแก้ไขบันทึกก่อน");
+      renderDaily();
+      return;
+    }
+
+    const hasEntry=Object.values(dailyDraft).some(draft=>
+      num(draft?.received)>0||num(draft?.used)>0
+    );
+
+    if(!hasEntry){
+      alert("กรุณากรอกจำนวนรับเข้าหรือเบิกใช้อย่างน้อย 1 รายการ");
+      return;
+    }
+
+    await saveFirstRecord(date);
+  }catch(error){
+    console.error(error);
+    alert("บันทึกไม่สำเร็จ: "+error.message);
+  }finally{
+    saveInProgress=false;
+    renderDaily();
+  }
 }
 async function saveFirstRecord(date){
-  const logged=baseInventory.map((x,i)=>{const d=dailyDraft[i]||{received:0,used:0},r=Math.max(0,num(d.received)),u=Math.max(0,num(d.used));return{...x,stock:Math.max(0,Number((num(x.stock)+r-u).toFixed(2))),total7Days:Number((num(x.total7Days)+u).toFixed(2)),buyQty:r,usedToday:u}});
-  const updates={};logged.forEach((x,i)=>{updates[`${ROOT}/inventory/${i}/stock`]=x.stock;updates[`${ROOT}/inventory/${i}/total7Days`]=x.total7Days;updates[`${ROOT}/inventory/${i}/buyQty`]=0;updates[`${ROOT}/inventory/${i}/usedToday`]=0});
-  const log={date,updatedBy:currentUser||"ไม่ระบุชื่อ",updatedAt:new Date().toISOString(),inventory:logged};updates[`${ROOT}/dailyLogs/${date}`]=log;
-  await db.ref().update(updates);baseInventory=logged.map(x=>({...x,buyQty:0,usedToday:0}));inventory=baseInventory.map(x=>({...x}));loadedDailyLog=log;historyEditMode=false;alert(`บันทึกวันที่ ${date} เรียบร้อย`);
+  const isCurrentDate=date===todayStr;
+  const logged=[];
+  const updates={};
+
+  for(let index=0;index<baseInventory.length;index++){
+    const item=baseInventory[index];
+    const draft=dailyDraft[index]||{received:0,used:0};
+    const received=Math.max(0,num(draft.received));
+    const used=Math.max(0,num(draft.used));
+    const nextStock=Number((num(item.stock)+received-used).toFixed(2));
+
+    if(nextStock<0){
+      throw new Error(`สต็อกของ "${item.name}" ไม่พอสำหรับยอดเบิก`);
+    }
+
+    // เก็บจำนวนรับเข้าและเบิกใช้ของวันที่เลือกไว้ในประวัติ
+    logged.push({
+      ...item,
+      stock:nextStock,
+      total7Days:Number((num(item.total7Days)+used).toFixed(2)),
+      buyQty:received,
+      usedToday:used
+    });
+
+    // ปรับยอดคงเหลือปัจจุบันตามรายการที่บันทึก
+    updates[`${ROOT}/inventory/${index}/stock`]=nextStock;
+    updates[`${ROOT}/inventory/${index}/total7Days`]=
+      Number((num(item.total7Days)+used).toFixed(2));
+
+    // ล้างช่องประจำวันเฉพาะเมื่อบันทึกของวันนี้
+    if(isCurrentDate){
+      updates[`${ROOT}/inventory/${index}/buyQty`]=0;
+      updates[`${ROOT}/inventory/${index}/usedToday`]=0;
+    }
+  }
+
+  const log={
+    date,
+    updatedBy:currentUser||"ไม่ระบุชื่อ",
+    updatedAt:new Date().toISOString(),
+    inventory:logged
+  };
+  updates[`${ROOT}/dailyLogs/${date}`]=log;
+
+  await db.ref().update(updates);
+
+  // อัปเดตข้อมูลสินค้าโดยไม่ล้างช่องของวันนี้เมื่อลงย้อนหลัง
+  baseInventory=baseInventory.map((item,index)=>({
+    ...item,
+    stock:logged[index].stock,
+    total7Days:logged[index].total7Days,
+    buyQty:isCurrentDate?0:num(item.buyQty),
+    usedToday:isCurrentDate?0:num(item.usedToday)
+  }));
+
+  inventory=baseInventory.map(item=>({...item}));
+  loadedDailyLog=log;
+  historyEditMode=false;
+
+  alert(`บันทึกวันที่ ${date} เรียบร้อย`);
 }
 async function saveCorrection(date,oldLog){
   const oldItems=cleanItems(oldLog.inventory),corrected=[],updates={};
